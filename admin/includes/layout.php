@@ -53,8 +53,8 @@ $isSuperAdmin  = hasRole('superadmin');
   <div class="admin-menu-group">Inhalte</div>
   <a href="<?= SITE_URL ?>/admin/news.php" class="admin-menu-item <?= $ap==='news'?'active':'' ?>"><span class="menu-icon">📰</span><span>News</span></a>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/seasons.php" class="admin-menu-item <?= $ap==='seasons'?'active':'' ?>"><span class="menu-icon">🏆</span><span>Saisons</span></a><?php endif; ?>
-  <a href="<?= SITE_URL ?>/admin/calendar.php" class="admin-menu-item <?= $ap==='calendar'?'active':'' ?>"><span class="menu-icon">📅</span><span>Kalender</span></a>
-  <a href="<?= SITE_URL ?>/admin/tracks.php" class="admin-menu-item <?= $ap==='tracks'?'active':'' ?>"><span class="menu-icon">🗺️</span><span>Strecken</span></a>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/calendar.php" class="admin-menu-item <?= $ap==='calendar'?'active':'' ?>"><span class="menu-icon">📅</span><span>Kalender</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/tracks.php" class="admin-menu-item <?= $ap==='tracks'?'active':'' ?>"><span class="menu-icon">🗺️</span><span>Strecken</span></a><?php endif; ?>
   <div class="admin-menu-group">Teilnehmer</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/teams.php" class="admin-menu-item <?= $ap==='teams'?'active':'' ?>"><span class="menu-icon">🚗</span><span>Teams</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Fahrer (Global)</span></a><?php endif; ?>
@@ -63,7 +63,7 @@ $isSuperAdmin  = hasRole('superadmin');
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/results.php" class="admin-menu-item <?= $ap==='results'?'active':'' ?>"><span class="menu-icon">🏁</span><span>Race Results</span></a><?php endif; ?>
   <?php if($qe): ?><a href="<?= SITE_URL ?>/admin/qualifying.php" class="admin-menu-item <?= $ap==='qualifying'?'active':'' ?>"><span class="menu-icon">⏱️</span><span>Qualifying Results</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/import_lmu.php" class="admin-menu-item <?= $ap==='import_lmu'?'active':'' ?>"><span class="menu-icon">🏎</span><span>LMU XML Import</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/export.php" class="admin-menu-item <?= $ap==='export'?'active':'' ?>"><span class="menu-icon">🖼</span><span>Grafik Export</span></a><?php endif; ?>
+<?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/export.php" class="admin-menu-item <?= $ap==='export'?'active':'' ?>"><span class="menu-icon">🖼</span><span>Grafik Export</span></a><?php endif; ?>
   <?php if($pe): ?><a href="<?= SITE_URL ?>/admin/penalties.php" class="admin-menu-item <?= $ap==='penalties'?'active':'' ?>"><span class="menu-icon">⚠️</span><span>Strafen</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/points.php" class="admin-menu-item <?= $ap==='points'?'active':'' ?>"><span class="menu-icon">🏅</span><span>Punktesystem</span></a><?php endif; ?>
   <div class="admin-menu-group">System</div>

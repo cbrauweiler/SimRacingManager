@@ -5,7 +5,7 @@ $adminTitle = 'Strecken'; $adminPage = 'tracks';
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireRole('editor'); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id = (int)($_POST['id'] ?? 0);
