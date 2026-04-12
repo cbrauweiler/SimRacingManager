@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '0.7.4');
+define('APP_VERSION', '0.8.0');
 
 function getDB(): PDO {
     static $pdo = null;
@@ -33,7 +33,26 @@ function startSecureSession(): void {
 }
 function isLoggedIn(): bool { startSecureSession(); return !empty($_SESSION['admin_id'])&&!empty($_SESSION['admin_user']); }
 function requireLogin(): void { if(!isLoggedIn()){header('Location: '.SITE_URL.'/admin/login.php');exit;} }
-function currentUser(): ?array { if(!isLoggedIn()) return null; return ['id'=>$_SESSION['admin_id'],'user'=>$_SESSION['admin_user'],'role'=>$_SESSION['admin_role']??'admin']; }
+function currentUser(): ?array { if(!isLoggedIn()) return null; return ['id'=>$_SESSION['admin_id'],'user'=>$_SESSION['admin_user'],'role'=>$_SESSION['admin_role']??'editor']; }
+
+// Rollenprüfung: superadmin > admin > editor
+function userRole(): string { return $_SESSION['admin_role'] ?? 'editor'; }
+function hasRole(string $required): bool {
+    $hierarchy = ['editor'=>1,'admin'=>2,'superadmin'=>3];
+    $current   = $hierarchy[userRole()] ?? 0;
+    $needed    = $hierarchy[$required]  ?? 99;
+    return $current >= $needed;
+}
+function requireRole(string $role): void {
+    requireLogin();
+    if (!hasRole($role)) {
+        http_response_code(403);
+        // Flash-Meldung setzen und zurück zum Dashboard
+        startSecureSession();
+        $_SESSION['flash'] = ['type'=>'error','msg'=>'⛔ Keine Berechtigung für diesen Bereich.'];
+        header('Location: '.SITE_URL.'/admin/index.php'); exit;
+    }
+}
 
 // CSRF
 function csrfToken(): string { startSecureSession(); if(empty($_SESSION['csrf_token'])) $_SESSION['csrf_token']=bin2hex(random_bytes(32)); return $_SESSION['csrf_token']; }
@@ -269,6 +288,64 @@ function sendPasswordResetMail(string $to, string $username, string $token): voi
               . "Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.\n\n"
               . "Viele Grüße,\nDein {$league} Team";
     sendMail($to, $subject, $body, $username);
+}
+
+
+// ============================================================
+// MFA / TOTP (RFC 6238) – Google Authenticator kompatibel
+// Keine externe Bibliothek nötig
+// ============================================================
+function mfaBase32Decode(string $b32): string {
+    $b32 = strtoupper(preg_replace('/\s+/','',$b32));
+    $map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $bits = ''; $out = '';
+    foreach (str_split($b32) as $c) {
+        $v = strpos($map,$c);
+        if ($v === false) continue;
+        $bits .= str_pad(decbin($v),5,'0',STR_PAD_LEFT);
+    }
+    foreach (str_split($bits,8) as $byte) {
+        if (strlen($byte) === 8) $out .= chr(bindec($byte));
+    }
+    return $out;
+}
+
+function mfaGenerateSecret(): string {
+    $map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $secret = '';
+    for ($i=0;$i<32;$i++) $secret .= $map[random_int(0,31)];
+    return $secret;
+}
+
+function mfaGetCode(string $secret, int $offset=0): string {
+    $key   = mfaBase32Decode($secret);
+    $time  = str_pad(pack('N*',0).pack('N*',floor(time()/30)+$offset),8,'\0',STR_PAD_LEFT);
+    $hash  = hash_hmac('sha1',$time,$key,true);
+    $offset2 = ord($hash[19]) & 0x0F;
+    $code  = (
+        ((ord($hash[$offset2])   & 0x7F) << 24) |
+        ((ord($hash[$offset2+1]) & 0xFF) << 16) |
+        ((ord($hash[$offset2+2]) & 0xFF) << 8)  |
+        ((ord($hash[$offset2+3]) & 0xFF))
+    ) % 1000000;
+    return str_pad((string)$code,6,'0',STR_PAD_LEFT);
+}
+
+function mfaVerify(string $secret, string $code, int $window=1): bool {
+    $code = preg_replace('/\D/','',$code);
+    if (strlen($code) !== 6) return false;
+    for ($i=-$window;$i<=$window;$i++) {
+        if (hash_equals(mfaGetCode($secret,$i),$code)) return true;
+    }
+    return false;
+}
+
+function mfaQrUrl(string $secret, string $user, string $issuer): string {
+    $issuer = rawurlencode($issuer);
+    $user   = rawurlencode($user);
+    $secret = rawurlencode($secret);
+    $otpauth = "otpauth://totp/{$issuer}:{$user}?secret={$secret}&issuer={$issuer}&algorithm=SHA1&digits=6&period=30";
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . rawurlencode($otpauth);
 }
 
 // Helpers

@@ -5,7 +5,7 @@ $adminTitle = 'Liga Einstellungen';
 $adminPage  = 'settings';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('admin');
     $fields = ['league_name','league_abbr','league_sub','league_desc'];
     foreach ($fields as $f) {
         setSetting($f, trim($_POST[$f] ?? ''));

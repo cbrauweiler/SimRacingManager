@@ -6,7 +6,7 @@ $db = getDB();
 $me = currentUser();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin(); verifyCsrf();
+    requireRole('superadmin'); verifyCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {

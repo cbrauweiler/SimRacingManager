@@ -6,7 +6,7 @@ $adminTitle = 'Punktesystem'; $adminPage = 'points';
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('admin');
     $pts = $_POST['points'] ?? [];
     $pts = array_map('intval', array_filter($pts, fn($v) => $v !== ''));
     setSetting('points_system', implode(',', $pts));

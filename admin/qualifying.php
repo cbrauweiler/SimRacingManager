@@ -5,7 +5,7 @@ $adminTitle = 'Qualifying'; $adminPage = 'qualifying';
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin(); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save_entry') {

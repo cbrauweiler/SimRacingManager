@@ -6,7 +6,7 @@ $db = getDB(); $user = currentUser();
 
 // Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('editor');
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save') {

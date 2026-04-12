@@ -6,7 +6,7 @@ $adminTitle = 'Saisons'; $adminPage = 'seasons';
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('admin');
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id   = (int)($_POST['id'] ?? 0);

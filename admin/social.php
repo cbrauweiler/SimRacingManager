@@ -3,7 +3,7 @@ define('IN_APP', true);
 require_once dirname(__DIR__) . '/includes/config.php';
 $adminTitle = 'Social Links'; $adminPage = 'social';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('admin');
     $platforms = $_POST['platform'] ?? [];
     $urls      = $_POST['url']      ?? [];
     $links = [];

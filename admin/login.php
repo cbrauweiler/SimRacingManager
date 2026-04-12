@@ -13,6 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$username]);
         $user = $stmt->fetch();
         if ($user && password_verify($password, $user['password_hash'])) {
+            if (!empty($user['mfa_enabled']) && !empty($user['mfa_secret'])) {
+                // MFA aktiv: Daten in Session zwischenspeichern, zum MFA-Check weiterleiten
+                $_SESSION['mfa_pending_id']   = $user['id'];
+                $_SESSION['mfa_pending_user'] = $user['username'];
+                $_SESSION['mfa_pending_role'] = $user['role'];
+                header('Location: ' . SITE_URL . '/admin/mfa_check.php');
+                exit;
+            }
+            // Kein MFA: direkt einloggen
             $_SESSION['admin_id']   = $user['id'];
             $_SESSION['admin_user'] = $user['username'];
             $_SESSION['admin_role'] = $user['role'];

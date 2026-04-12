@@ -5,7 +5,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $adminTitle = 'Design'; $adminPage = 'design';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin(); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
     foreach (['color_primary','color_secondary','color_tertiary','color_bg','color_text'] as $c)
         if (preg_match('/^#[0-9a-fA-F]{6}$/', $_POST[$c] ?? ''))
             setSetting($c, $_POST[$c]);

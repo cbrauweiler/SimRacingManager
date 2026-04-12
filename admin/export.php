@@ -4,6 +4,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $adminTitle = 'Grafik Export'; $adminPage = 'export';
 $db = getDB();
 
+requireRole('admin');
 $seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC, id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s)=>$s['is_active']))[0] ?? ($seasons[0]??null);
 $sid = $activeSeason['id'] ?? 0;

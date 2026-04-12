@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
 
 -- Default: admin / admin123  → bitte sofort ändern!
 INSERT INTO `admin_users` (`username`, `password_hash`, `email`, `role`) VALUES
-('admin', '$2y$10$SFw3NhNs7fmuEC3a4eYM..Ux/lWKuKJZR8T0terfKfKudsGCq.rIq', 'admin@example.com', 'superadmin')
+('admin', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@example.com', 'superadmin')
 ON DUPLICATE KEY UPDATE `username` = `username`;
 
 -- -------------------------------------------------------
@@ -305,3 +305,11 @@ INSERT INTO `settings` (`key`, `value`) VALUES
 ('mail_smtp_pass',  ''),
 ('mail_smtp_enc',   'tls')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+-- Migration: MFA / TOTP
+ALTER TABLE `admin_users`
+  ADD COLUMN IF NOT EXISTS `mfa_secret`  VARCHAR(64)  NULL DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS `mfa_enabled` TINYINT(1)   NOT NULL DEFAULT 0;
+
+-- Settings für MFA
+INSERT INTO `settings` (`key`,`value`) VALUES ('mfa_optional','1') ON DUPLICATE KEY UPDATE `value`=VALUES(`value`);

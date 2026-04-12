@@ -5,7 +5,7 @@ $adminTitle = 'Rennkalender'; $adminPage = 'calendar';
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin(); verifyCsrf();
+    requireRole('editor'); verifyCsrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save') {

@@ -4,7 +4,7 @@ define('IN_APP', true);
 require_once dirname(__DIR__) . '/includes/config.php';
 $adminTitle = 'Liga Info'; $adminPage = 'info';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin();
+    requireRole('admin');
     setSetting('info_html', $_POST['info_html'] ?? '');
     $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Liga-Info gespeichert!'];
     header('Location: ' . SITE_URL . '/admin/info.php'); exit;

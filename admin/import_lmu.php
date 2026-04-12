@@ -78,8 +78,13 @@ function parseLmuXml(string $xmlContent): array {
         ];
     }
 
-    // Nach ClassPosition sortieren
-    usort($result['entries'], fn($a,$b) => $a['position'] <=> $b['position']);
+    // Nach ClassPosition sortieren – DNF/DSQ ans Ende
+    usort($result['entries'], function($a, $b) {
+        $aDead = ($a['dnf'] || $a['dsq']) ? 1 : 0;
+        $bDead = ($b['dnf'] || $b['dsq']) ? 1 : 0;
+        if ($aDead !== $bDead) return $aDead - $bDead;
+        return $a['position'] <=> $b['position'];
+    });
 
     // Leader für Gap-Berechnung
     $leader = $result['entries'][0] ?? null;
@@ -107,6 +112,8 @@ function parseLmuXml(string $xmlContent): array {
         }
     }
 
+    unset($e); // Referenz aus Gap-foreach aufloesen
+
     // Schnellste Runde im Rennen
     if ($result['type'] === 'race') {
         $fName = null; $fTime = PHP_FLOAT_MAX;
@@ -118,6 +125,7 @@ function parseLmuXml(string $xmlContent): array {
         foreach ($result['entries'] as &$e) {
             $e['is_fastest_lap'] = ($e['name'] === $fName) ? 1 : 0;
         }
+        unset($e); // Referenz aufloesen
     }
 
     return $result;
@@ -137,7 +145,7 @@ function formatRaceTime(float $s): string {
 // SAVE RESULT
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']??'') === 'save_lmu') {
-    requireLogin(); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
 
     $raceId      = (int)$_POST['race_id'];
     $sessionType = $_POST['session_type'] ?? 'race';
@@ -262,7 +270,7 @@ if ($selectedRaceId) {
 // STEP 2: XML parsen (nur wenn Rennen gewählt)
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']??'') === 'parse') {
-    requireLogin(); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
 
     if (!$selectedRaceId) {
         $parseError = 'Bitte zuerst ein Rennen auswählen!';
@@ -767,8 +775,7 @@ require_once __DIR__ . '/includes/layout.php';
             <td>
               <input type="number" name="points[<?= $i ?>]" id="pts-<?= $i ?>"
                      class="form-control form-control-sm" value="<?= $pts ?>"
-                     min="0" step="0.5" style="width:68px"
-                     <?= ($e['dnf']||$e['dsq']) ? 'disabled' : '' ?>/>
+                     min="0" step="0.5" style="width:68px"/>
             </td>
 
             <!-- FL Bonus -->

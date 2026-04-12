@@ -13,7 +13,7 @@ $selectedSeason = null;
 foreach ($seasons as $s) { if ($s['id'] == $selectedSeasonId) { $selectedSeason = $s; break; } }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    requireLogin(); verifyCsrf();
+    requireRole('admin'); verifyCsrf();
     $action = $_POST['action'] ?? '';
 
     // Einzelnen Eintrag speichern / aktualisieren
