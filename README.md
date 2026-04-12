@@ -31,7 +31,7 @@ mysql -u BENUTZER -p DATENBANKNAME < install.sql
 
 ### 3. Konfiguration anpassen
 
-In `/includes/config.php` die folgenden Werte setzen:
+In `/includes/config.inc_example.php` die folgenden Werte setzen und die Datei in `config.inc.php` umbenennen:
 
 ```php
 // Pflichtfeld – vollständige URL ohne abschließenden Slash
@@ -245,10 +245,17 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 
 | Version | Änderungen |
 |---|---|
-| v0.9 | Initiales Release: Website, Admin, LMU-Import, Wertung |
-| v0.9.1 | Grafik-Export (WEC-Style + Instagram), Discord Webhook |
-| v0.9.2 | Strafensystem, Ergebnis-Editor, Qualifying |
-| v0.9.3 | E-Mail/SMTP, Passwort-Reset, Custom CSS, Twitch Embed, Farbschema-Fix |
+| v0.4 | Initiales Release: Website, Admin, LMU-Import, Wertung |
+| v0.5 | Grafik-Export (WEC-Style + Instagram), Discord Webhook |
+| v0.6 | Strafensystem, Ergebnis-Editor, Qualifying |
+| v0.7 | E-Mail/SMTP, Passwort-Reset |
+| v0.7.1 | Custom CSS |
+| v0.7.2 | Farbschema-Fix |
+| v0.7.3 | Twitch Embed |
+| v0.7.4 | Strafensystem & Ergebnis-Editor Fix |
+| v0.8 | GEPLANT: Rollensystem implementieren |
+| v0.9 | GEPLANT: MFA Login Absicherung |
+| v1.0 | GEPLANT: Import aus Racing League Tools (F1, ACC, etc.) |
 
 ---
 
