@@ -252,6 +252,8 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 | v0.8 | Rollensystem implementieren |
 | v0.9 | MFA Login Absicherung |
 | v1.0 | Import aus Racing League Tools (F1, ACC, etc.) |
+| v1.1 | Menü (Reihenfolge flexibel anpassbar) |
+| v1.2 | Hall of Fame (Siege, Punkte, Podien, Schnellste Runden |
 
 ---
 
