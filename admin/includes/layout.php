@@ -29,7 +29,15 @@ $isSuperAdmin  = hasRole('superadmin');
   <?php if(getSetting('maintenance_mode','0')==='1'): ?><div style="background:rgba(245,166,35,.15);border:1px solid var(--secondary);border-radius:4px;padding:4px 12px;margin:0 16px;font-size:.8rem;color:var(--secondary)">🔧 Wartungsmodus</div><?php endif; ?>
   <div class="admin-topbar-right">
     <span class="admin-user-badge">👤 <strong><?= h($cu['user']) ?></strong> <span class="badge badge-muted" style="font-size:.6rem"><?= h($cu['role']) ?></span></span>
-    <a href="<?= SITE_URL ?>/admin/mfa_setup.php" class="btn btn-secondary btn-sm" title="Zwei-Faktor-Authentifizierung">🔐<?php if(!empty($cu['id']) && $db=getDB() && ($mfaRow=$db->prepare("SELECT mfa_enabled FROM admin_users WHERE id=?")) && $mfaRow->execute([$cu['id']]) && ($mfaEnabled=$mfaRow->fetchColumn())): ?> <span style="color:#4cffb0;font-size:.6rem">ON</span><?php else: ?> <span style="color:#8888a0;font-size:.6rem">OFF</span><?php endif; ?></a>
+    <?php
+    $mfaDb  = getDB();
+    $mfaStmt = $mfaDb->prepare("SELECT mfa_enabled FROM admin_users WHERE id=?");
+    $mfaStmt->execute([$cu['id']]);
+    $mfaOn = (bool)$mfaStmt->fetchColumn();
+    ?>
+    <a href="<?= SITE_URL ?>/admin/mfa_setup.php" class="btn btn-secondary btn-sm" title="Zwei-Faktor-Authentifizierung">
+      🔐 <?php if($mfaOn): ?><span style="color:#4cffb0;font-size:.6rem">ON</span><?php else: ?><span style="color:#8888a0;font-size:.6rem">OFF</span><?php endif; ?>
+    </a>
     <a href="<?= SITE_URL ?>/" class="btn btn-secondary btn-sm" target="_blank">🌐 Website</a>
     <a href="<?= SITE_URL ?>/admin/logout.php" class="btn btn-danger btn-sm">Logout</a>
   </div>

@@ -32,10 +32,10 @@ ServerSignature Off
     </FilesMatch>
 </IfModule>
 
-# Protect config
-<Files "config.php">
+# Protect config files
+<FilesMatch "^config\.inc\.php$">
     Deny from all
-</Files>
+</FilesMatch>
 
 # Gzip compression
 <IfModule mod_deflate.c>
