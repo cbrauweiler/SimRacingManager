@@ -61,10 +61,10 @@ $isSuperAdmin  = hasRole('superadmin');
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/lineup.php" class="admin-menu-item <?= $ap==='lineup'?'active':'' ?>"><span class="menu-icon">📋</span><span>Saison-Lineup</span></a><?php endif; ?>
   <div class="admin-menu-group">Rennen</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/results.php" class="admin-menu-item <?= $ap==='results'?'active':'' ?>"><span class="menu-icon">🏁</span><span>Race Results</span></a><?php endif; ?>
-  <?php if($qe): ?><a href="<?= SITE_URL ?>/admin/qualifying.php" class="admin-menu-item <?= $ap==='qualifying'?'active':'' ?>"><span class="menu-icon">⏱️</span><span>Qualifying Results</span></a><?php endif; ?>
+  <?php if($qe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/qualifying.php" class="admin-menu-item <?= $ap==='qualifying'?'active':'' ?>"><span class="menu-icon">⏱️</span><span>Qualifying Results</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/import_lmu.php" class="admin-menu-item <?= $ap==='import_lmu'?'active':'' ?>"><span class="menu-icon">🏎</span><span>LMU XML Import</span></a><?php endif; ?>
 <?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/export.php" class="admin-menu-item <?= $ap==='export'?'active':'' ?>"><span class="menu-icon">🖼</span><span>Grafik Export</span></a><?php endif; ?>
-  <?php if($pe): ?><a href="<?= SITE_URL ?>/admin/penalties.php" class="admin-menu-item <?= $ap==='penalties'?'active':'' ?>"><span class="menu-icon">⚠️</span><span>Strafen</span></a><?php endif; ?>
+  <?php if($pe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/penalties.php" class="admin-menu-item <?= $ap==='penalties'?'active':'' ?>"><span class="menu-icon">⚠️</span><span>Strafen</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/points.php" class="admin-menu-item <?= $ap==='points'?'active':'' ?>"><span class="menu-icon">🏅</span><span>Punktesystem</span></a><?php endif; ?>
   <div class="admin-menu-group">System</div>
 <?php if(hasRole('superadmin')): ?>  <a href="<?= SITE_URL ?>/admin/users.php" class="admin-menu-item <?= $ap==='users'?'active':'' ?>"><span class="menu-icon">👤</span><span>Benutzer</span></a><?php endif; ?>
