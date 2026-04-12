@@ -176,7 +176,7 @@ if ($sid) {
 // Rennen der aktiven Saison für Zuordnung
 $races = [];
 if ($sid) {
-    $rstmt = $db->prepare("SELECT r.*, (SELECT COUNT(*) FROM results WHERE race_id=r.id) AS has_result FROM races WHERE season_id=? ORDER BY round ASC");
+    $rstmt = $db->prepare("SELECT r.*, (SELECT COUNT(*) FROM results WHERE race_id=r.id) AS has_result FROM races r WHERE r.season_id=? ORDER BY r.round ASC");
     $rstmt->execute([$sid]);
     $races = $rstmt->fetchAll();
 }
