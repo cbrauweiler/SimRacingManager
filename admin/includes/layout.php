@@ -69,7 +69,8 @@ $isSuperAdmin  = hasRole('superadmin');
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/points.php" class="admin-menu-item <?= $ap==='points'?'active':'' ?>"><span class="menu-icon">🏅</span><span>Punktesystem</span></a><?php endif; ?>
   <div class="admin-menu-group">System</div>
 <?php if(hasRole('superadmin')): ?>  <a href="<?= SITE_URL ?>/admin/users.php" class="admin-menu-item <?= $ap==='users'?'active':'' ?>"><span class="menu-icon">👤</span><span>Benutzer</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/advanced.php" class="admin-menu-item <?= $ap==='advanced'?'active':'' ?>"><span class="menu-icon">🔧</span><span>Erweitert</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/advanced.php" class="admin-menu-item <?= $ap==='advanced'?'active':'' ?>"><span class="menu-icon">🔧</span><span>Erweitert</span></a>
+  <?php if(hasRole('superadmin')): ?><a href="<?= SITE_URL ?>/admin/update.php" class="admin-menu-item <?= $ap==='update'?'active':'' ?>"><span class="menu-icon">⬆️</span><span>System Update</span></a><?php endif; ?><?php endif; ?>
 </aside>
 <main class="admin-content">
 <?php if(isset($_SESSION['flash'])): ?><div class="notice notice-<?= h($_SESSION['flash']['type']) ?> flash-message"><?= h($_SESSION['flash']['msg']) ?></div><?php unset($_SESSION['flash']); endif; ?>

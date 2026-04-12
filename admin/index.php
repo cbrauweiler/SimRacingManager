@@ -25,6 +25,23 @@ $nextRace = $db->query("
     ORDER BY rc.race_date ASC LIMIT 1")->fetch();
 ?>
 
+<?php
+// Update-Check (gecacht für 6h in Session)
+if (empty($_SESSION['update_check_time']) || time() - $_SESSION['update_check_time'] > 21600) {
+    $ctx = stream_context_create(['http'=>['timeout'=>4,'user_agent'=>'SimRacingManager/'.APP_VERSION,'ignore_errors'=>true]]);
+    $rel = @json_decode(@file_get_contents('https://api.github.com/repos/cbrauweiler/SimRacingManager/releases/latest', false, $ctx), true);
+    $_SESSION['update_check_result'] = $rel['tag_name'] ?? null;
+    $_SESSION['update_check_time']   = time();
+}
+$latestVer = $_SESSION['update_check_result'] ?? null;
+$updateAvail = $latestVer && version_compare(ltrim($latestVer,'v'), APP_VERSION, '>');
+?>
+<?php if ($updateAvail): ?>
+<div class="notice notice-warning mb-3" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <span>🆕 <strong>Update verfügbar:</strong> Version <?= h($latestVer) ?> ist auf GitHub veröffentlicht.</span>
+  <a href="<?= SITE_URL ?>/admin/update.php" class="btn btn-secondary btn-sm">Update installieren →</a>
+</div>
+<?php endif; ?>
 <div class="admin-page-title">Dashboard</div>
 <div class="admin-page-sub">Willkommen zurück, <?= h($cu['user']) ?>!</div>
 
