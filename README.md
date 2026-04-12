@@ -245,17 +245,13 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 
 | Version | Änderungen |
 |---|---|
-| v0.4 | Initiales Release: Website, Admin, LMU-Import, Wertung |
-| v0.5 | Grafik-Export (WEC-Style + Instagram), Discord Webhook |
-| v0.6 | Strafensystem, Ergebnis-Editor, Qualifying |
-| v0.7 | E-Mail/SMTP, Passwort-Reset |
-| v0.7.1 | Custom CSS |
-| v0.7.2 | Farbschema-Fix |
-| v0.7.3 | Twitch Embed |
-| v0.7.4 | Strafensystem & Ergebnis-Editor Fix |
-| v0.8 | GEPLANT: Rollensystem implementieren |
-| v0.9 | GEPLANT: MFA Login Absicherung |
-| v1.0 | GEPLANT: Import aus Racing League Tools (F1, ACC, etc.) |
+| v0.4 | Initiales Release: Frontend, Backend (Administration), LMU-Import, Wertung |
+| v0.5 | Grafik-Export (Default/Discord + Instagram), Discord Webhook |
+| v0.6 | Strafensystem, Ergebnis-Editor, Qualifying-Editor |
+| v0.7 | E-Mail/SMTP, Passwort-Reset, Custom CSS, Twitch Embed |
+| v0.8 | Rollensystem implementieren |
+| v0.9 | MFA Login Absicherung |
+| v1.0 | Import aus Racing League Tools (F1, ACC, etc.) |
 
 ---
 
