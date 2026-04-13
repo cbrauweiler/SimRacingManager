@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $gap       = trim($_POST["gap"][$i]        ?? '');
             $dNameRaw  = trim($_POST["driver_name_raw"][$i] ?? '');
             $tNameRaw  = trim($_POST["team_name_raw"][$i]   ?? '');
-            $db->prepare("INSERT INTO qualifying_results (race_id,driver_id,driver_name_raw,team_id,position,lap_time,gap) VALUES (?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO qualifying_results (race_id,driver_id,driver_name_raw,team_id,position,lap_time,gap) VALUES (?,?,?,?,?,?,?)")
                ->execute([$raceId,$driverId,$dNameRaw,$teamId,$pos,$lapTime,$gap]);
         }
         auditLog('import_rlt_quali','races',$raceId,"RLT Qualifying Import: {$count} Fahrer");
