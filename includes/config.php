@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '1.0.2');
+define('APP_VERSION', '1.0.0');
 
 function getDB(): PDO {
     static $pdo = null;

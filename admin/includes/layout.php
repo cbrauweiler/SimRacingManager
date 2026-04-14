@@ -48,6 +48,7 @@ $isSuperAdmin  = hasRole('superadmin');
   <a href="<?= SITE_URL ?>/admin/index.php" class="admin-menu-item <?= $ap==='dashboard'?'active':'' ?>"><span class="menu-icon">📊</span><span>Dashboard</span></a>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/settings.php" class="admin-menu-item <?= $ap==='settings'?'active':'' ?>"><span class="menu-icon">⚙️</span><span>Liga Einstellungen</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/design.php" class="admin-menu-item <?= $ap==='design'?'active':'' ?>"><span class="menu-icon">🎨</span><span>Design</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/navigation.php" class="admin-menu-item <?= $ap==='navigation'?'active':'' ?>"><span class="menu-icon">🔗</span><span>Navigation</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/info.php" class="admin-menu-item <?= $ap==='info'?'active':'' ?>"><span class="menu-icon">ℹ️</span><span>Liga Info</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/social.php" class="admin-menu-item <?= $ap==='social'?'active':'' ?>"><span class="menu-icon">🔗</span><span>Social Links</span></a><?php endif; ?>
   <div class="admin-menu-group">Inhalte</div>

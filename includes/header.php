@@ -73,14 +73,26 @@ $border = adjustHex($bgColor, 32);
     </div>
   </a>
   <nav class="main-nav">
-    <a href="<?= SITE_URL ?>/" class="<?= $currentPage==='home'?'active':'' ?>">Home</a>
-    <a href="<?= SITE_URL ?>/news.php" class="<?= $currentPage==='news'?'active':'' ?>">News</a>
-    <a href="<?= SITE_URL ?>/season.php" class="<?= $currentPage==='season'?'active':'' ?>">Saison</a>
-    <a href="<?= SITE_URL ?>/calendar.php" class="<?= $currentPage==='calendar'?'active':'' ?>">Kalender</a>
-    <a href="<?= SITE_URL ?>/results.php" class="<?= $currentPage==='results'?'active':'' ?>">Ergebnisse</a>
-    <a href="<?= SITE_URL ?>/standings.php" class="<?= $currentPage==='standings'?'active':'' ?>">Wertung</a>
-    <a href="<?= SITE_URL ?>/teams.php" class="<?= $currentPage==='teams'?'active':'' ?>">Teams</a>
-    <a href="<?= SITE_URL ?>/info.php" class="<?= $currentPage==='info'?'active':'' ?>">Liga Info</a>
+    <?php
+    $navJson = getSetting('nav_items','');
+    $navItems = $navJson ? json_decode($navJson,true) : null;
+    if (!$navItems) $navItems = [
+        ['key'=>'home',      'label'=>'Home',         'url'=>'/',             'visible'=>1],
+        ['key'=>'news',      'label'=>'News',          'url'=>'/news.php',      'visible'=>1],
+        ['key'=>'season',    'label'=>'Saison',        'url'=>'/season.php',    'visible'=>1],
+        ['key'=>'calendar',  'label'=>'Kalender',      'url'=>'/calendar.php',  'visible'=>1],
+        ['key'=>'results',   'label'=>'Ergebnisse',    'url'=>'/results.php',   'visible'=>1],
+        ['key'=>'standings', 'label'=>'Wertung',       'url'=>'/standings.php', 'visible'=>1],
+        ['key'=>'teams',     'label'=>'Teams',         'url'=>'/teams.php',     'visible'=>1],
+        ['key'=>'info',      'label'=>'Liga Info',     'url'=>'/info.php',      'visible'=>1],
+    ];
+    foreach ($navItems as $ni):
+        if (empty($ni['visible'])) continue;
+        $niUrl    = SITE_URL . $ni['url'];
+        $niActive = ($currentPage??'') === $ni['key'] ? ' active' : '';
+    ?>
+    <a href="<?= h($niUrl) ?>" class="<?= $niActive ?>"><?= h($ni['label']) ?></a>
+    <?php endforeach; ?>
   </nav>
   <div class="nav-right">
     <a href="<?= SITE_URL ?>/admin/" class="btn btn-primary btn-sm nav-admin-btn">⚙ Admin</a>
@@ -93,30 +105,15 @@ $border = adjustHex($bgColor, 32);
 </header>
 
 <div id="mobile-nav" class="mobile-nav" aria-hidden="true">
-  <a href="<?= SITE_URL ?>/" class="<?= $currentPage==='home'?'active':'' ?>">
-    <span class="mnav-icon">🏠</span> Home
+  <?php foreach ($navItems as $ni):
+    if (empty($ni['visible'])) continue;
+    $niUrl    = SITE_URL . $ni['url'];
+    $niActive = ($currentPage??'') === $ni['key'] ? ' active' : '';
+  ?>
+  <a href="<?= h($niUrl) ?>" class="<?= $niActive ?>">
+    <span class="mnav-icon"><?= h($ni['icon'] ?? '') ?></span> <?= h($ni['label']) ?>
   </a>
-  <a href="<?= SITE_URL ?>/news.php" class="<?= $currentPage==='news'?'active':'' ?>">
-    <span class="mnav-icon">📰</span> News
-  </a>
-  <a href="<?= SITE_URL ?>/season.php" class="<?= $currentPage==='season'?'active':'' ?>">
-    <span class="mnav-icon">🏆</span> Saison
-  </a>
-  <a href="<?= SITE_URL ?>/calendar.php" class="<?= $currentPage==='calendar'?'active':'' ?>">
-    <span class="mnav-icon">📅</span> Kalender
-  </a>
-  <a href="<?= SITE_URL ?>/results.php" class="<?= $currentPage==='results'?'active':'' ?>">
-    <span class="mnav-icon">🏁</span> Ergebnisse
-  </a>
-  <a href="<?= SITE_URL ?>/standings.php" class="<?= $currentPage==='standings'?'active':'' ?>">
-    <span class="mnav-icon">📊</span> Wertung
-  </a>
-  <a href="<?= SITE_URL ?>/teams.php" class="<?= $currentPage==='teams'?'active':'' ?>">
-    <span class="mnav-icon">👥</span> Teams
-  </a>
-  <a href="<?= SITE_URL ?>/info.php" class="<?= $currentPage==='info'?'active':'' ?>">
-    <span class="mnav-icon">ℹ️</span> Liga Info
-  </a>
+  <?php endforeach; ?>
   <div class="mnav-divider"></div>
   <a href="<?= SITE_URL ?>/admin/" class="mnav-admin">
     <span class="mnav-icon">⚙️</span> Admin

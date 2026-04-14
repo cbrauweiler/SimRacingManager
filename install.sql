@@ -313,3 +313,6 @@ ALTER TABLE `admin_users`
 
 -- Settings für MFA
 INSERT INTO `settings` (`key`,`value`) VALUES ('mfa_optional','1') ON DUPLICATE KEY UPDATE `value`=VALUES(`value`);
+
+-- Migration: Navigation-Reihenfolge
+INSERT INTO `settings` (`key`, `value`) VALUES ('nav_items', '') ON DUPLICATE KEY UPDATE `value`=`value`;
