@@ -4,17 +4,16 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $adminTitle = 'Navigation'; $adminPage = 'navigation';
 requireRole('admin');
 
-// Standard-Navigation
 define('NAV_DEFAULT', json_encode([
     ['key'=>'home',      'label'=>'Home',         'icon'=>'🏠', 'url'=>'/',             'visible'=>1],
-    ['key'=>'news',      'label'=>'News',          'icon'=>'📰', 'url'=>'/news.php',      'visible'=>1],
-    ['key'=>'season',    'label'=>'Saison',        'icon'=>'🏆', 'url'=>'/season.php',    'visible'=>1],
-    ['key'=>'calendar',  'label'=>'Kalender',      'icon'=>'📅', 'url'=>'/calendar.php',  'visible'=>1],
-    ['key'=>'results',   'label'=>'Ergebnisse',    'icon'=>'🏁', 'url'=>'/results.php',   'visible'=>1],
-    ['key'=>'standings', 'label'=>'Wertung',       'icon'=>'📊', 'url'=>'/standings.php', 'visible'=>1],
-    ['key'=>'teams',     'label'=>'Teams',         'icon'=>'👥', 'url'=>'/teams.php',     'visible'=>1],
-    ['key'=>'hof',       'label'=>'Hall of Fame',  'icon'=>'🏅', 'url'=>'/hof.php',       'visible'=>0],
-    ['key'=>'info',      'label'=>'Liga Info',     'icon'=>'ℹ️', 'url'=>'/info.php',      'visible'=>1],
+    ['key'=>'news',      'label'=>'News',          'icon'=>'📰', 'url'=>'/news.php',     'visible'=>1],
+    ['key'=>'season',    'label'=>'Saison',        'icon'=>'🏆', 'url'=>'/season.php',   'visible'=>1],
+    ['key'=>'calendar',  'label'=>'Kalender',      'icon'=>'📅', 'url'=>'/calendar.php', 'visible'=>1],
+    ['key'=>'results',   'label'=>'Ergebnisse',    'icon'=>'🏁', 'url'=>'/results.php',  'visible'=>1],
+    ['key'=>'standings', 'label'=>'Wertung',       'icon'=>'📊', 'url'=>'/standings.php','visible'=>1],
+    ['key'=>'teams',     'label'=>'Teams',         'icon'=>'👥', 'url'=>'/teams.php',    'visible'=>1],
+    ['key'=>'hof',       'label'=>'Hall of Fame',  'icon'=>'🏅', 'url'=>'/hof.php',      'visible'=>0],
+    ['key'=>'info',      'label'=>'Liga Info',     'icon'=>'ℹ️', 'url'=>'/info.php',     'visible'=>1],
 ], JSON_UNESCAPED_UNICODE));
 
 function getNavItems(): array {
@@ -29,30 +28,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save') {
-        $keys    = $_POST['keys']    ?? [];
-        $labels  = $_POST['labels']  ?? [];
-        $icons   = $_POST['icons']   ?? [];
-        $urls    = $_POST['urls']    ?? [];
-        $visible = $_POST['visible'] ?? [];
+        // Reihenfolge kommt als JSON-String vom JS
+        $orderJson = $_POST['order'] ?? '';
+        $order     = $orderJson ? json_decode($orderJson, true) : null;
 
-        $items = [];
-        foreach ($keys as $i => $key) {
-            $items[] = [
-                'key'     => preg_replace('/[^a-z0-9_]/', '', $key),
-                'label'   => trim($labels[$i] ?? $key),
-                'icon'    => trim($icons[$i]  ?? ''),
-                'url'     => trim($urls[$i]   ?? '/'),
-                'visible' => isset($visible[$i]) ? 1 : 0,
-            ];
+        if ($order && is_array($order)) {
+            $items = [];
+            foreach ($order as $row) {
+                $items[] = [
+                    'key'     => preg_replace('/[^a-z0-9_]/', '', $row['key'] ?? ''),
+                    'label'   => trim($row['label'] ?? ''),
+                    'icon'    => trim($row['icon']  ?? ''),
+                    'url'     => trim($row['url']   ?? '/'),
+                    'visible' => (int)($row['visible'] ?? 0),
+                ];
+            }
+            setSetting('nav_items', json_encode($items, JSON_UNESCAPED_UNICODE));
+            auditLog('nav_save', 'settings', 0, count($items) . ' items');
+            $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Navigation gespeichert!'];
+        } else {
+            $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Fehler beim Speichern.'];
         }
-        setSetting('nav_items', json_encode($items, JSON_UNESCAPED_UNICODE));
-        auditLog('nav_save', 'settings', 0, count($items) . ' items');
-        $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Navigation gespeichert!'];
         header('Location: ' . SITE_URL . '/admin/navigation.php'); exit;
     }
 
     if ($action === 'reset') {
         setSetting('nav_items', NAV_DEFAULT);
+        auditLog('nav_reset', 'settings', 0);
         $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Navigation zurückgesetzt.'];
         header('Location: ' . SITE_URL . '/admin/navigation.php'); exit;
     }
@@ -62,125 +64,118 @@ $items = getNavItems();
 require_once __DIR__ . '/includes/layout.php';
 ?>
 <div class="admin-page-title">Navigation <span style="color:var(--primary)">bearbeiten</span></div>
-<div class="admin-page-sub">Reihenfolge per Drag & Drop ändern, Einträge ein-/ausblenden und Labels anpassen</div>
+<div class="admin-page-sub">Reihenfolge per Drag & Drop, Einträge ein-/ausblenden, Labels anpassen</div>
 
-<form method="post" id="nav-form">
-  <?= csrfField() ?>
-  <input type="hidden" name="action" value="save"/>
-
-  <div class="card mb-3">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-      <h3>🔗 Menü-Einträge</h3>
-      <button type="submit" class="btn btn-primary btn-sm">💾 Speichern</button>
-    </div>
-    <div class="card-body">
-      <div class="notice notice-info mb-3" style="font-size:.83rem">
-        Ziehe Einträge per <strong>⠿</strong> in die gewünschte Reihenfolge.
-        Deaktivierte Einträge werden in der Navigation ausgeblendet.
-      </div>
-
-      <div id="nav-list" style="display:flex;flex-direction:column;gap:8px">
-        <?php foreach ($items as $i => $item): ?>
-        <div class="nav-item-row" data-index="<?= $i ?>" style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;cursor:default">
-          <span class="drag-handle" style="cursor:grab;font-size:1.2rem;color:var(--text2);flex-shrink:0">⠿</span>
-
-          <!-- Sichtbar -->
-          <input type="checkbox" name="visible[<?= $i ?>]"
-                 id="vis-<?= $i ?>"
-                 <?= $item['visible'] ? 'checked' : '' ?>
-                 style="width:18px;height:18px;flex-shrink:0"
-                 title="Sichtbar"/>
-
-          <!-- Icon -->
-          <input type="text" name="icons[<?= $i ?>]"
-                 value="<?= h($item['icon']) ?>"
-                 class="form-control" style="width:52px;padding:6px;text-align:center;font-size:1.1rem"
-                 title="Icon (Emoji)"/>
-
-          <!-- Label -->
-          <input type="text" name="labels[<?= $i ?>]"
-                 value="<?= h($item['label']) ?>"
-                 class="form-control" style="flex:1;min-width:100px"
-                 placeholder="Bezeichnung"/>
-
-          <!-- URL -->
-          <input type="text" name="urls[<?= $i ?>]"
-                 value="<?= h($item['url']) ?>"
-                 class="form-control" style="flex:1;min-width:120px;font-family:monospace;font-size:.82rem"
-                 placeholder="/seite.php"/>
-
-          <!-- Key (hidden) -->
-          <input type="hidden" name="keys[<?= $i ?>]" value="<?= h($item['key']) ?>"/>
-
-          <span class="text-muted" style="font-size:.75rem;min-width:60px"><?= h($item['key']) ?></span>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <div class="card-body" style="border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap">
-      <form method="post" style="display:inline" onsubmit="return confirm('Navigation auf Standard zurücksetzen?')">
-        <?= csrfField() ?>
-        <input type="hidden" name="action" value="reset"/>
-        <button type="submit" class="btn btn-secondary">↩ Standard wiederherstellen</button>
-      </form>
-      <button type="submit" form="nav-form" class="btn btn-primary">💾 Speichern</button>
+<!-- ================================================================
+  NUR ein Form auf der Seite – Reset läuft über separaten POST
+================================================================ -->
+<div class="card mb-3">
+  <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <h3>🔗 Menü-Einträge</h3>
+    <div class="flex gap-2">
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-reset"
+              onclick="resetNav()">↩ Standard</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-save"
+              onclick="saveNav()">💾 Speichern</button>
     </div>
   </div>
+  <div class="card-body">
+    <div class="notice notice-info mb-3" style="font-size:.83rem">
+      Ziehe Einträge an der <strong>⠿</strong> Griffleiste in die gewünschte Reihenfolge.
+      Häkchen = sichtbar in der Navigation.
+    </div>
+
+    <div id="nav-list" style="display:flex;flex-direction:column;gap:6px">
+      <?php foreach ($items as $item): ?>
+      <div class="nav-row"
+           data-key="<?= h($item['key']) ?>"
+           data-url="<?= h($item['url']) ?>"
+           style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px">
+
+        <span class="sortable-handle"
+              style="cursor:grab;font-size:1.3rem;color:var(--text2);flex-shrink:0;user-select:none"
+              title="Ziehen zum Sortieren">⠿</span>
+
+        <input type="checkbox" class="nav-visible"
+               <?= $item['visible'] ? 'checked' : '' ?>
+               title="In Navigation anzeigen"
+               style="width:18px;height:18px;flex-shrink:0"/>
+
+        <input type="text" class="nav-icon form-control"
+               value="<?= h($item['icon']) ?>"
+               style="width:52px;padding:6px;text-align:center;font-size:1.1rem;flex-shrink:0"
+               title="Icon (Emoji)" placeholder="🔗"/>
+
+        <input type="text" class="nav-label form-control"
+               value="<?= h($item['label']) ?>"
+               style="flex:1;min-width:100px"
+               placeholder="Bezeichnung"/>
+
+        <input type="text" class="nav-url form-control"
+               value="<?= h($item['url']) ?>"
+               style="flex:1;min-width:130px;font-family:monospace;font-size:.82rem"
+               placeholder="/seite.php"/>
+
+        <span class="text-muted" style="font-size:.72rem;min-width:55px;flex-shrink:0"><?= h($item['key']) ?></span>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</div>
+
+<!-- Verstecktes Form für Save und Reset -->
+<form method="post" id="nav-form" style="display:none">
+  <?= csrfField() ?>
+  <input type="hidden" name="action" id="nav-action" value="save"/>
+  <input type="hidden" name="order"  id="nav-order"  value=""/>
 </form>
 
 <div class="notice notice-info" style="font-size:.82rem">
-  💡 <strong>Hall of Fame</strong> ist standardmäßig deaktiviert. Aktiviere den Eintrag um sie in der Navigation anzuzeigen.
+  💡 <strong>Hall of Fame</strong> ist standardmäßig deaktiviert – einfach das Häkchen setzen und speichern.
   Die Seite ist immer unter <code>/hof.php</code> erreichbar.
 </div>
 
+<!-- SortableJS von CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
-// Drag & Drop Sortierung
-var list = document.getElementById('nav-list');
-var dragEl = null, dragOver = null;
-
-list.querySelectorAll('.drag-handle').forEach(function(handle) {
-    handle.addEventListener('mousedown', function(e) {
-        dragEl = handle.closest('.nav-item-row');
-        dragEl.style.opacity = '.5';
-        dragEl.style.cursor  = 'grabbing';
-    });
+// SortableJS initialisieren
+var sortable = new Sortable(document.getElementById('nav-list'), {
+    handle:    '.sortable-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
 });
 
-list.addEventListener('dragover', function(e) { e.preventDefault(); });
-
-// Simpler Drag & Drop ohne HTML5 drag API (kompatibel)
-document.addEventListener('mousemove', function(e) {
-    if (!dragEl) return;
-    var rows = Array.from(list.querySelectorAll('.nav-item-row'));
+function collectOrder() {
+    var rows  = document.querySelectorAll('#nav-list .nav-row');
+    var order = [];
     rows.forEach(function(row) {
-        if (row === dragEl) return;
-        var rect = row.getBoundingClientRect();
-        var mid  = rect.top + rect.height / 2;
-        if (e.clientY < mid) {
-            list.insertBefore(dragEl, row);
-        }
-    });
-});
-
-document.addEventListener('mouseup', function() {
-    if (!dragEl) return;
-    dragEl.style.opacity = '1';
-    dragEl.style.cursor  = 'default';
-    dragEl = null;
-    // Index-Attribute und Input-Namen aktualisieren
-    reindex();
-});
-
-function reindex() {
-    list.querySelectorAll('.nav-item-row').forEach(function(row, i) {
-        row.setAttribute('data-index', i);
-        row.querySelectorAll('input').forEach(function(inp) {
-            inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
-            if (inp.id) inp.id = inp.id.replace(/-\d+$/, '-' + i);
+        order.push({
+            key:     row.getAttribute('data-key'),
+            url:     row.querySelector('.nav-url').value,
+            label:   row.querySelector('.nav-label').value,
+            icon:    row.querySelector('.nav-icon').value,
+            visible: row.querySelector('.nav-visible').checked ? 1 : 0,
         });
-        var lbl = row.querySelector('label');
-        if (lbl) lbl.setAttribute('for', 'vis-' + i);
     });
+    return order;
+}
+
+function saveNav() {
+    document.getElementById('nav-action').value = 'save';
+    document.getElementById('nav-order').value  = JSON.stringify(collectOrder());
+    document.getElementById('nav-form').submit();
+}
+
+function resetNav() {
+    if (!confirm('Navigation auf Standard zurücksetzen?')) return;
+    document.getElementById('nav-action').value = 'reset';
+    document.getElementById('nav-order').value  = '';
+    document.getElementById('nav-form').submit();
 }
 </script>
+<style>
+.sortable-ghost { opacity: .35; background: var(--bg2) !important; }
+.sortable-handle:active { cursor: grabbing; }
+</style>
+
 <?php require_once __DIR__ . '/includes/layout_end.php'; ?>
