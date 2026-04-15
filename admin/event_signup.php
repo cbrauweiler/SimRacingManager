@@ -1,0 +1,322 @@
+<?php
+define('IN_APP', true);
+require_once dirname(__DIR__) . '/includes/config.php';
+$adminTitle = 'Race Anmeldung'; $adminPage = 'event_signup';
+requireRole('editor');
+$db = getDB();
+
+// Wetter-Optionen
+define('WEATHER_OPTIONS', [
+    'Clear'               => ['emoji'=>'☀️',  'label'=>'Klar (Clear)'],
+    'LightClouds'         => ['emoji'=>'🌤️', 'label'=>'Leicht bewölkt (Light Clouds)'],
+    'PartiallyCloudy'     => ['emoji'=>'⛅',  'label'=>'Teilweise bewölkt (Partially Cloudy)'],
+    'MostlyCloudy'        => ['emoji'=>'🌥️', 'label'=>'Überwiegend bewölkt (Mostly Cloudy)'],
+    'Overcast'            => ['emoji'=>'☁️',  'label'=>'Bedeckt (Overcast)'],
+    'CloudyDrizzle'       => ['emoji'=>'🌦️', 'label'=>'Bewölkt & Niesel (Cloudy & Drizzle)'],
+    'CloudyLightRain'     => ['emoji'=>'🌧️', 'label'=>'Leichter Regen (Cloudy & Light Rain)'],
+    'OvercastLightRain'   => ['emoji'=>'🌨️', 'label'=>'Bedeckt & leichter Regen (Overcast & Light Rain)'],
+    'OvercastRain'        => ['emoji'=>'🌧️', 'label'=>'Regen (Overcast & Rain)'],
+    'OvercastHeavyRain'   => ['emoji'=>'💧',  'label'=>'Starkregen (Overcast & Heavy Rain)'],
+    'OvercastStorm'       => ['emoji'=>'⛈️',  'label'=>'Gewitter (Overcast & Storm)'],
+]);
+
+$botEnabled  = getSetting('discord_bot_enabled','0') === '1';
+$botToken    = getSetting('discord_bot_token','');
+$botChannel  = getSetting('discord_bot_channel','');
+$botPort     = getSetting('discord_bot_port','3001');
+$botReady    = $botEnabled && $botToken && $botChannel;
+
+// Rennen ohne offenes Event laden
+$races = $db->query("
+    SELECT rc.*, s.name AS season_name, s.year,
+           (SELECT id FROM discord_events WHERE race_id=rc.id AND is_closed=0 LIMIT 1) AS open_event_id,
+           (SELECT id FROM discord_events WHERE race_id=rc.id LIMIT 1) AS any_event_id
+    FROM races rc
+    JOIN seasons s ON s.id=rc.season_id
+    WHERE s.is_active=1
+    ORDER BY rc.round ASC
+")->fetchAll();
+
+// POST: Event erstellen + an Bot senden
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verifyCsrf();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'post_event') {
+        $raceId       = (int)$_POST['race_id'];
+        $trainTime    = trim($_POST['time_training'] ?? '');
+        $briefTime    = trim($_POST['time_briefing'] ?? '');
+        $raceTime     = trim($_POST['time_race']     ?? '');
+        $wxTraining   = $_POST['wx_training']   ?? 'Clear';
+        $wxQuali      = $_POST['wx_quali']      ?? 'Clear';
+        $wxRace       = $_POST['wx_race']       ?? 'Clear';
+        $deadlineHrs  = (int)($_POST['deadline_hours'] ?? 2);
+
+        $race = $db->prepare("SELECT rc.*,s.name AS season_name,s.year FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE rc.id=?");
+        $race->execute([$raceId]); $race=$race->fetch();
+        if (!$race) { $_SESSION['flash']=['type'=>'error','msg'=>'❌ Rennen nicht gefunden.']; header('Location: '.SITE_URL.'/admin/event_signup.php'); exit; }
+
+        // Deadline berechnen
+        $raceDateTime = $race['race_date'] . ' ' . ($race['race_time'] ?: '00:00:00');
+        $deadline = date('Y-m-d H:i:s', strtotime($raceDateTime) - ($deadlineHrs * 3600));
+
+        // Event in DB speichern
+        $db->prepare("INSERT INTO discord_events (race_id,channel_id,deadline,created_by) VALUES (?,?,?,?)")
+           ->execute([$raceId, $botChannel, $deadline, currentUser()['id']]);
+        $eventId = (int)$db->lastInsertId();
+
+        // Payload für Bot zusammenbauen
+        $wo = WEATHER_OPTIONS;
+        $payload = [
+            'event_id'      => $eventId,
+            'race_id'       => $raceId,
+            'round'         => $race['round'],
+            'track_name'    => $race['track_name'],
+            'location'      => $race['location'] ?? '',
+            'season_name'   => $race['season_name'],
+            'race_date'     => $race['race_date'],
+            'race_time'     => $race['race_time'],
+            'time_training' => $trainTime,
+            'time_briefing' => $briefTime,
+            'time_race'     => $raceTime,
+            'wx_training'   => ['key'=>$wxTraining,  'emoji'=>$wo[$wxTraining]['emoji'],  'label'=>$wo[$wxTraining]['label']],
+            'wx_quali'      => ['key'=>$wxQuali,     'emoji'=>$wo[$wxQuali]['emoji'],     'label'=>$wo[$wxQuali]['label']],
+            'wx_race'       => ['key'=>$wxRace,      'emoji'=>$wo[$wxRace]['emoji'],      'label'=>$wo[$wxRace]['label']],
+            'deadline'      => $deadline,
+            'deadline_hours'=> $deadlineHrs,
+            'channel_id'    => $botChannel,
+            'callback_url'  => SITE_URL . '/api/discord_interaction.php',
+            'bot_secret'    => substr(hash('sha256', $botToken), 0, 32),
+        ];
+
+        // HTTP-Request an Bot
+        $botUrl = 'http://127.0.0.1:' . $botPort . '/post-event';
+        $ctx = stream_context_create(['http'=>[
+            'method'  => 'POST',
+            'header'  => "Content-Type: application/json\r\n",
+            'content' => json_encode($payload),
+            'timeout' => 8,
+            'ignore_errors' => true,
+        ]]);
+        $response = @file_get_contents($botUrl, false, $ctx);
+        $resp = $response ? json_decode($response, true) : null;
+
+        if ($resp && !empty($resp['message_id'])) {
+            $db->prepare("UPDATE discord_events SET message_id=?, thread_id=? WHERE id=?")
+               ->execute([$resp['message_id'], $resp['thread_id']??null, $eventId]);
+            auditLog('discord_event_post','discord_events',$eventId,$race['track_name']);
+            $_SESSION['flash']=['type'=>'success','msg'=>'✅ Anmeldung in Discord gepostet!'];
+        } else {
+            $db->prepare("DELETE FROM discord_events WHERE id=?")->execute([$eventId]);
+            $err = $resp['error'] ?? ($response ?: 'Bot nicht erreichbar');
+            $_SESSION['flash']=['type'=>'error','msg'=>'❌ Bot-Fehler: '.h($err)];
+        }
+        header('Location: '.SITE_URL.'/admin/event_signup.php'); exit;
+    }
+
+    if ($action === 'close_event') {
+        $eventId = (int)$_POST['event_id'];
+        $event = $db->prepare("SELECT * FROM discord_events WHERE id=?")->execute([$eventId]) ? $db->prepare("SELECT * FROM discord_events WHERE id=?") : null;
+        $evStmt = $db->prepare("SELECT * FROM discord_events WHERE id=?");
+        $evStmt->execute([$eventId]); $ev = $evStmt->fetch();
+        if ($ev) {
+            // Bot anweisen Buttons zu deaktivieren
+            $payload = ['event_id'=>$eventId, 'message_id'=>$ev['message_id'], 'channel_id'=>$ev['channel_id'], 'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
+            $ctx = stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>json_encode($payload),'timeout'=>5,'ignore_errors'=>true]]);
+            @file_get_contents('http://127.0.0.1:'.$botPort.'/close-event', false, $ctx);
+            $db->prepare("UPDATE discord_events SET is_closed=1 WHERE id=?")->execute([$eventId]);
+            auditLog('discord_event_close','discord_events',$eventId);
+        }
+        $_SESSION['flash']=['type'=>'success','msg'=>'✅ Anmeldung geschlossen.'];
+        header('Location: '.SITE_URL.'/admin/event_signup.php'); exit;
+    }
+
+    if ($action === 'delete_event') {
+        $eventId = (int)$_POST['event_id'];
+        $evStmt = $db->prepare("SELECT * FROM discord_events WHERE id=?");
+        $evStmt->execute([$eventId]); $ev = $evStmt->fetch();
+        if ($ev) {
+            // Bot anweisen Nachricht zu löschen
+            $payload = ['event_id'=>$eventId,'message_id'=>$ev['message_id'],'channel_id'=>$ev['channel_id'],'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
+            $ctx = stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>json_encode($payload),'timeout'=>5,'ignore_errors'=>true]]);
+            @file_get_contents('http://127.0.0.1:'.$botPort.'/delete-event', false, $ctx);
+            $db->prepare("DELETE FROM discord_events WHERE id=?")->execute([$eventId]);
+            auditLog('discord_event_delete','discord_events',$eventId);
+        }
+        $_SESSION['flash']=['type'=>'success','msg'=>'🗑 Anmeldung entfernt.'];
+        header('Location: '.SITE_URL.'/admin/event_signup.php'); exit;
+    }
+}
+
+// Aktuelle Events laden
+$events = $db->query("
+    SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time, s.name AS season_name,
+           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='accepted')  AS cnt_yes,
+           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='declined')  AS cnt_no,
+           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='maybe')     AS cnt_maybe
+    FROM discord_events de
+    JOIN races rc ON rc.id=de.race_id
+    JOIN seasons s ON s.id=rc.season_id
+    ORDER BY de.sent_at DESC LIMIT 20
+")->fetchAll();
+
+require_once __DIR__ . '/includes/layout.php';
+$wo = WEATHER_OPTIONS;
+$defaultHrs = getSetting('discord_signup_hours','2');
+?>
+<div class="admin-page-title">Race <span style="color:var(--primary)">Anmeldung</span></div>
+<div class="admin-page-sub">Discord Anmeldeformular für das nächste Rennen posten</div>
+
+<?php if (!$botReady): ?>
+<div class="notice notice-warning mb-3">
+  ⚠️ <strong>Discord Bot nicht konfiguriert.</strong>
+  Bitte zuerst unter <a href="<?= SITE_URL ?>/admin/advanced.php#bot" style="color:var(--primary)">Erweitert → Discord Bot</a>
+  Token, Channel-ID und Port eintragen und den Bot aktivieren.
+</div>
+<?php endif; ?>
+
+<div class="grid-2" style="gap:20px;align-items:start">
+
+  <!-- Neues Event erstellen -->
+  <div class="card">
+    <div class="card-header"><h3>📋 Anmeldung erstellen</h3></div>
+    <div class="card-body">
+      <form method="post">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="post_event"/>
+
+        <div class="form-group">
+          <label>Rennen *</label>
+          <select name="race_id" class="form-control" required>
+            <option value="">– Rennen wählen –</option>
+            <?php foreach ($races as $r): ?>
+            <option value="<?= $r['id'] ?>" <?= $r['open_event_id']?'disabled':'' ?>>
+              R<?= (int)$r['round'] ?> – <?= h($r['track_name']) ?>
+              <?= $r['race_date'] ? ' ('.date('d.m.Y',strtotime($r['race_date'])).')' : '' ?>
+              <?= $r['open_event_id'] ? ' ⚠ Bereits aktiv' : '' ?>
+            </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="divider"></div>
+        <div class="form-group"><label style="font-weight:700;color:var(--text)">⏰ Zeitplan</label></div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label>Training</label>
+            <input type="time" name="time_training" class="form-control" placeholder="19:00"/>
+          </div>
+          <div class="form-group">
+            <label>Briefing</label>
+            <input type="time" name="time_briefing" class="form-control" placeholder="19:30"/>
+          </div>
+          <div class="form-group">
+            <label>Rennstart</label>
+            <input type="time" name="time_race" class="form-control" placeholder="20:00"/>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="form-group"><label style="font-weight:700;color:var(--text)">🌤️ Wetter</label></div>
+        <?php foreach ([
+            ['key'=>'wx_training', 'label'=>'Training'],
+            ['key'=>'wx_quali',    'label'=>'Qualifying'],
+            ['key'=>'wx_race',     'label'=>'Rennen'],
+        ] as $wx): ?>
+        <div class="form-group">
+          <label><?= $wx['label'] ?></label>
+          <select name="<?= $wx['key'] ?>" class="form-control">
+            <?php foreach ($wo as $key => $opt): ?>
+            <option value="<?= $key ?>"><?= $opt['emoji'] ?> <?= h($opt['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <?php endforeach; ?>
+
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>⏳ Anmeldefrist (Stunden vor Rennstart)</label>
+          <input type="number" name="deadline_hours" class="form-control" value="<?= $defaultHrs ?>" min="0" max="72" style="max-width:120px"/>
+          <div class="form-hint">0 = keine Frist</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" <?= !$botReady?'disabled':'' ?>>
+          📢 In Discord posten
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Aktive Events -->
+  <div class="card">
+    <div class="card-header"><h3>📊 Bisherige Anmeldungen</h3></div>
+    <div class="card-body" style="padding:0;max-height:600px;overflow-y:auto">
+      <?php if ($events): foreach ($events as $ev): ?>
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div class="flex justify-between align-center gap-2 mb-1" style="flex-wrap:wrap">
+          <div>
+            <strong>R<?= (int)$ev['round'] ?> · <?= h($ev['track_name']) ?></strong>
+            <span class="text-muted" style="font-size:.8rem;margin-left:6px"><?= h($ev['season_name']) ?></span>
+            <?php if ($ev['is_closed']): ?>
+              <span class="badge badge-muted" style="font-size:.65rem">Geschlossen</span>
+            <?php else: ?>
+              <span class="badge badge-success" style="font-size:.65rem">Aktiv</span>
+            <?php endif; ?>
+          </div>
+          <div class="flex gap-1">
+            <?php if (!$ev['is_closed']): ?>
+            <form method="post" style="display:inline">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="close_event"/>
+              <input type="hidden" name="event_id" value="<?= $ev['id'] ?>"/>
+              <button class="btn btn-secondary btn-sm" title="Anmeldung schließen">⏹</button>
+            </form>
+            <?php endif; ?>
+            <form method="post" style="display:inline" onsubmit="return confirm('Anmeldung und alle Antworten löschen?')">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="delete_event"/>
+              <input type="hidden" name="event_id" value="<?= $ev['id'] ?>"/>
+              <button class="btn btn-danger btn-sm">🗑</button>
+            </form>
+          </div>
+        </div>
+        <div class="flex gap-3" style="font-size:.85rem;margin-top:6px">
+          <span style="color:#4cffb0">✅ <?= (int)$ev['cnt_yes'] ?></span>
+          <span style="color:#ff8080">❌ <?= (int)$ev['cnt_no'] ?></span>
+          <span style="color:#f5a623">❓ <?= (int)$ev['cnt_maybe'] ?></span>
+        </div>
+        <?php if ($ev['deadline'] && !$ev['is_closed']): ?>
+        <div class="text-muted" style="font-size:.75rem;margin-top:4px">
+          ⏳ Frist: <?= date('d.m.Y H:i', strtotime($ev['deadline'])) ?> Uhr
+        </div>
+        <?php endif; ?>
+        <!-- Teilnehmerliste aufklappen -->
+        <div id="signup-detail-<?= $ev['id'] ?>" style="display:none;margin-top:8px">
+          <?php
+          $sups = $db->prepare("SELECT * FROM race_signups WHERE event_id=? ORDER BY status ASC, changed_at ASC");
+          $sups->execute([$ev['id']]); $sups=$sups->fetchAll();
+          foreach (['accepted'=>['✅','#4cffb0'],'declined'=>['❌','#ff8080'],'maybe'=>['❓','#f5a623']] as $st=>[$ico,$col]):
+            $filtered = array_filter($sups, fn($s)=>$s['status']===$st);
+            if ($filtered): ?>
+          <div style="margin-top:4px">
+            <?php foreach ($filtered as $su): ?>
+            <div style="font-size:.82rem;color:<?= $col ?>"><?= $ico ?> <?= h($su['discord_username']) ?></div>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; endforeach; ?>
+        </div>
+        <?php if ($sups ?? false): ?>
+        <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;font-size:.72rem"
+                onclick="var d=document.getElementById('signup-detail-<?= $ev['id'] ?>');d.style.display=d.style.display==='none'?'block':'none'">
+          👥 Teilnehmer anzeigen
+        </button>
+        <?php endif; ?>
+      </div>
+      <?php endforeach; else: ?>
+      <div style="padding:18px" class="text-muted">Noch keine Anmeldungen erstellt.</div>
+      <?php endif; ?>
+    </div>
+  </div>
+
+</div>
+<?php require_once __DIR__ . '/includes/layout_end.php'; ?>

@@ -8,6 +8,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireRole('admin'); verifyCsrf();
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'bot') {
+        setSetting('discord_bot_token',   trim($_POST['discord_bot_token']   ?? ''));
+        setSetting('discord_bot_channel', trim($_POST['discord_bot_channel'] ?? ''));
+        setSetting('discord_bot_port',    trim($_POST['discord_bot_port']    ?? '3001'));
+        setSetting('discord_bot_enabled', isset($_POST['discord_bot_enabled']) ? '1' : '0');
+        setSetting('discord_signup_hours',trim($_POST['discord_signup_hours'] ?? '2'));
+
+        // config.json für Bot schreiben
+        $botToken  = getSetting('discord_bot_token','');
+        $botPort   = (int)getSetting('discord_bot_port','3001');
+        $botSecret = substr(hash('sha256', $botToken), 0, 32);
+        $configPath = dirname(__DIR__) . '/bot/config.json';
+        $configData = json_encode([
+            'token'        => $botToken,
+            'port'         => $botPort,
+            'callback_url' => SITE_URL . '/api/discord_interaction.php',
+            'bot_secret'   => $botSecret,
+        ], JSON_PRETTY_PRINT);
+        @file_put_contents($configPath, $configData);
+
+        auditLog('settings_bot');
+        $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Bot-Einstellungen gespeichert!'];
+        header('Location: '.SITE_URL.'/admin/advanced.php#bot'); exit;
+    }
     if ($action === 'mail') {
         setSetting('mail_from',      trim($_POST['mail_from']??''));
         setSetting('mail_from_name', trim($_POST['mail_from_name']??''));
@@ -154,6 +178,78 @@ require_once __DIR__ . '/includes/layout.php';
       <button type="submit" class="btn btn-secondary">📤 Senden</button>
     </form>
     <?php endif; ?>
+  </div>
+</div>
+
+<!-- Discord Bot -->
+<div class="card mb-4" id="bot">
+  <div class="card-header">
+    <h3>🤖 Discord Bot (Race Anmeldung)</h3>
+    <?php
+    $botEnabled = getSetting('discord_bot_enabled','0')==='1';
+    $botPort    = getSetting('discord_bot_port','3001');
+    // Health-Check
+    $botStatus  = 'Nicht konfiguriert';
+    $botOk      = false;
+    if ($botEnabled && getSetting('discord_bot_token','')) {
+        $ctx = stream_context_create(['http'=>['timeout'=>2,'ignore_errors'=>true]]);
+        $h   = @file_get_contents('http://127.0.0.1:'.$botPort.'/health', false, $ctx);
+        $hd  = $h ? json_decode($h, true) : null;
+        if ($hd && ($hd['status']??'')  === 'ok') {
+            $botStatus = '✅ Online · ' . h($hd['bot_tag'] ?? '') . ' · ' . (int)($hd['open_events']??0) . ' offene Event(s)';
+            $botOk = true;
+        } else {
+            $botStatus = '⚠️ Nicht erreichbar (läuft der Bot?)';
+        }
+    }
+    ?>
+    <span class="badge <?= $botOk ? 'badge-success' : 'badge-muted' ?>"><?= $botStatus ?></span>
+  </div>
+  <div class="card-body">
+    <div class="notice notice-info mb-3" style="font-size:.83rem">
+      Für die Race-Anmeldung via Discord wird ein Bot benötigt.
+      Einrichtung: <a href="<?= SITE_URL ?>/bot/README.md" target="_blank">bot/README.md</a> lesen →
+      Node.js installieren → <code>cd bot && npm install && node bot.js</code>
+    </div>
+    <form method="post"><?= csrfField() ?>
+    <input type="hidden" name="action" value="bot"/>
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" name="discord_bot_enabled" <?= getSetting('discord_bot_enabled','0')==='1'?'checked':'' ?>/>
+        Bot aktivieren
+      </label>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Bot-Token *</label>
+        <input type="password" name="discord_bot_token" class="form-control"
+               placeholder="<?= getSetting('discord_bot_token','') ? '••••••••••••' : 'Bot-Token aus Discord Developer Portal' ?>"
+               autocomplete="new-password"/>
+        <div class="form-hint">Leer lassen um gespeicherten Token zu behalten</div>
+      </div>
+      <div class="form-group">
+        <label>Channel-ID *</label>
+        <input type="text" name="discord_bot_channel" class="form-control"
+               value="<?= h(getSetting('discord_bot_channel','')) ?>"
+               placeholder="z.B. 1234567890123456789"/>
+        <div class="form-hint">Rechtsklick auf Channel → ID kopieren</div>
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Bot-Port</label>
+        <input type="number" name="discord_bot_port" class="form-control"
+               value="<?= h(getSetting('discord_bot_port','3001')) ?>" min="1024" max="65535" style="max-width:120px"/>
+        <div class="form-hint">Standard: 3001 (muss frei sein)</div>
+      </div>
+      <div class="form-group">
+        <label>Standard-Anmeldefrist (Stunden vor Rennstart)</label>
+        <input type="number" name="discord_signup_hours" class="form-control"
+               value="<?= h(getSetting('discord_signup_hours','2')) ?>" min="0" max="72" style="max-width:120px"/>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">💾 Speichern & config.json schreiben</button>
+    </form>
   </div>
 </div>
 

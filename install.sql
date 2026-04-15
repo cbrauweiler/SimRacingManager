@@ -316,3 +316,78 @@ INSERT INTO `settings` (`key`,`value`) VALUES ('mfa_optional','1') ON DUPLICATE 
 
 -- Migration: Navigation-Reihenfolge
 INSERT INTO `settings` (`key`, `value`) VALUES ('nav_items', '') ON DUPLICATE KEY UPDATE `value`=`value`;
+
+-- -------------------------------------------------------
+-- Discord Bot: Race Signups
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `discord_events` (
+  `id`               INT AUTO_INCREMENT PRIMARY KEY,
+  `race_id`          INT NOT NULL,
+  `message_id`       VARCHAR(30) DEFAULT NULL,
+  `channel_id`       VARCHAR(30) DEFAULT NULL,
+  `thread_id`        VARCHAR(30) DEFAULT NULL,
+  `deadline`         DATETIME DEFAULT NULL,
+  `is_closed`        TINYINT(1) NOT NULL DEFAULT 0,
+  `sent_at`          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`race_id`) REFERENCES `races`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `race_signups` (
+  `id`               INT AUTO_INCREMENT PRIMARY KEY,
+  `race_id`          INT NOT NULL,
+  `discord_user_id`  VARCHAR(30) NOT NULL,
+  `discord_username` VARCHAR(100) NOT NULL,
+  `discord_avatar`   VARCHAR(200) DEFAULT NULL,
+  `status`           ENUM('accepted','declined','maybe') NOT NULL,
+  `changed_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `unique_signup` (`race_id`, `discord_user_id`),
+  FOREIGN KEY (`race_id`) REFERENCES `races`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Bot-Einstellungen
+INSERT INTO `settings` (`key`, `value`) VALUES
+('bot_enabled',        '0'),
+('bot_token',          ''),
+('bot_channel_id',     ''),
+('bot_port',           '3001'),
+('bot_signup_deadline_hours', '2')
+ON DUPLICATE KEY UPDATE `value` = `value`;
+
+-- -------------------------------------------------------
+-- Discord Bot: Race Signup Events & Responses
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `discord_events` (
+  `id`              INT AUTO_INCREMENT PRIMARY KEY,
+  `race_id`         INT NOT NULL,
+  `message_id`      VARCHAR(30)  NULL DEFAULT NULL,
+  `channel_id`      VARCHAR(30)  NULL DEFAULT NULL,
+  `thread_id`       VARCHAR(30)  NULL DEFAULT NULL,
+  `deadline`        DATETIME     NULL DEFAULT NULL,
+  `is_closed`       TINYINT(1)   NOT NULL DEFAULT 0,
+  `sent_at`         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  `created_by`      INT          NULL DEFAULT NULL,
+  FOREIGN KEY (`race_id`)     REFERENCES `races`(`id`)       ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`)  REFERENCES `admin_users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `race_signups` (
+  `id`               INT AUTO_INCREMENT PRIMARY KEY,
+  `event_id`         INT NOT NULL,
+  `race_id`          INT NOT NULL,
+  `discord_user_id`  VARCHAR(30)  NOT NULL,
+  `discord_username` VARCHAR(100) NOT NULL,
+  `status`           ENUM('accepted','declined','maybe') NOT NULL,
+  `changed_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_event_user` (`event_id`, `discord_user_id`),
+  FOREIGN KEY (`event_id`) REFERENCES `discord_events`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`race_id`)  REFERENCES `races`(`id`)          ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Settings für Discord Bot
+INSERT INTO `settings` (`key`, `value`) VALUES
+('discord_bot_token',    ''),
+('discord_bot_channel',  ''),
+('discord_bot_port',     '3001'),
+('discord_bot_enabled',  '0'),
+('discord_signup_hours', '2')
+ON DUPLICATE KEY UPDATE `value` = `value`;
