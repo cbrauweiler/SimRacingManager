@@ -256,8 +256,9 @@ client.on('interactionCreate', async interaction => {
 const app = express();
 app.use(express.json());
 
-// Middleware: Secret prüfen
+// Middleware: Secret prüfen (außer /health)
 app.use((req, res, next) => {
+    if (req.path === '/health') return next();
     if (req.headers['x-bot-secret'] !== config.bot_secret && req.body?.bot_secret !== config.bot_secret) {
         return res.status(403).json({ error: 'Unauthorized' });
     }
