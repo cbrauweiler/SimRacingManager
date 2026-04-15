@@ -55,7 +55,7 @@ $socialSvgs = [
 
   </div>
   <div class="footer-copy container">
-    &copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by SimRace Manager <?= APP_VERSION ?>
+    &copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by <a href="https://github.com/cbrauweiler/SimRacingManager" target="_blank">SimRace Manager <?= APP_VERSION ?></a>
   </div>
 </footer>
 
