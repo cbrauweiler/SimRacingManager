@@ -21,6 +21,27 @@ define('WEATHER_OPTIONS', [
     'Night'               => ['emoji'=>'🌙',  'label'=>'Nacht (Night)'],
 ]);
 
+// Bot-HTTP-Request via fsockopen (funktioniert auch ohne allow_url_fopen)
+function botRequest(string $port, string $path, array $payload): ?array {
+    try {
+        $sock = @fsockopen('127.0.0.1', (int)$port, $errno, $errstr, 5);
+        if (!$sock) return null;
+        $body = json_encode($payload);
+        $req  = "POST {$path} HTTP/1.1\r\n"
+              . "Host: 127.0.0.1\r\n"
+              . "Content-Type: application/json\r\n"
+              . "Content-Length: " . strlen($body) . "\r\n"
+              . "Connection: close\r\n\r\n"
+              . $body;
+        fwrite($sock, $req);
+        $raw = '';
+        while (!feof($sock)) $raw .= fgets($sock, 4096);
+        fclose($sock);
+        $respBody = substr($raw, strpos($raw, "\r\n\r\n") + 4);
+        return $respBody ? json_decode(trim($respBody), true) : null;
+    } catch (\Throwable $e) { return null; }
+}
+
 $botEnabled  = getSetting('discord_bot_enabled','0') === '1';
 $botToken    = getSetting('discord_bot_token','');
 $botChannel  = getSetting('discord_bot_channel','');
@@ -98,16 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         // HTTP-Request an Bot
-        $botUrl = 'http://127.0.0.1:' . $botPort . '/post-event';
-        $ctx = stream_context_create(['http'=>[
-            'method'  => 'POST',
-            'header'  => "Content-Type: application/json\r\n",
-            'content' => json_encode($payload),
-            'timeout' => 8,
-            'ignore_errors' => true,
-        ]]);
-        $response = @file_get_contents($botUrl, false, $ctx);
-        $resp = $response ? json_decode($response, true) : null;
+        $resp = botRequest($botPort, '/post-event', $payload);
 
         if ($resp && !empty($resp['message_id'])) {
             $db->prepare("UPDATE discord_events SET message_id=?, thread_id=? WHERE id=?")
@@ -130,8 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($ev) {
             // Bot anweisen Buttons zu deaktivieren
             $payload = ['event_id'=>$eventId, 'message_id'=>$ev['message_id'], 'channel_id'=>$ev['channel_id'], 'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
-            $ctx = stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>json_encode($payload),'timeout'=>5,'ignore_errors'=>true]]);
-            @file_get_contents('http://127.0.0.1:'.$botPort.'/close-event', false, $ctx);
+            botRequest($botPort, '/close-event', $payload);
             $db->prepare("UPDATE discord_events SET is_closed=1 WHERE id=?")->execute([$eventId]);
             auditLog('discord_event_close','discord_events',$eventId);
         }
@@ -146,8 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($ev) {
             // Bot anweisen Nachricht zu löschen
             $payload = ['event_id'=>$eventId,'message_id'=>$ev['message_id'],'channel_id'=>$ev['channel_id'],'thread_id'=>$ev['thread_id']??null,'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
-            $ctx = stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>json_encode($payload),'timeout'=>5,'ignore_errors'=>true]]);
-            @file_get_contents('http://127.0.0.1:'.$botPort.'/delete-event', false, $ctx);
+            botRequest($botPort, '/delete-event', $payload);
             $db->prepare("DELETE FROM discord_events WHERE id=?")->execute([$eventId]);
             auditLog('discord_event_delete','discord_events',$eventId);
         }
