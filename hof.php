@@ -289,6 +289,29 @@ function hofRankColor(int $rank): string {
   ];
   ?>
 
+<?php if ($champSeasons): ?>
+<div class="mt-4">
+  <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
+  <div class="card">
+    <div class="card-body" style="padding:0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:140px">Saison</th>
+            <th>🏎️ Fahrer-Champion</th>
+            <th style="width:120px">Punkte</th>
+            <th>🚗 Team-Champion</th>
+            <th style="width:120px">Punkte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($champSeasons as $cs): ?>
+          <?php $dc = $cs['driver']; $tc = $cs['team']; ?>
+          <tr>
+            <td>
+              <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
+              <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
+
   <div class="grid-2" style="gap:20px">
   <?php foreach ($categories as $cat):
     if (!$cat['data']) continue;
@@ -333,28 +356,7 @@ function hofRankColor(int $rank): string {
   </div>
 </div>
 
-<?php if ($champSeasons): ?>
-<div class="mt-4">
-  <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
-  <div class="card">
-    <div class="card-body" style="padding:0">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width:140px">Saison</th>
-            <th>🏎️ Fahrer-Champion</th>
-            <th style="width:120px">Punkte</th>
-            <th>🚗 Team-Champion</th>
-            <th style="width:120px">Punkte</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($champSeasons as $cs): ?>
-          <?php $dc = $cs['driver']; $tc = $cs['team']; ?>
-          <tr>
-            <td>
-              <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
-              <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
+
             </td>
             <td>
               <div style="display:flex;align-items:center;gap:10px">
