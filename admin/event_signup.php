@@ -26,16 +26,21 @@ $botChannel  = getSetting('discord_bot_channel','');
 $botPort     = getSetting('discord_bot_port','3001');
 $botReady    = $botEnabled && $botToken && $botChannel;
 
-// Rennen ohne offenes Event laden
-$races = $db->query("
-    SELECT rc.*, s.name AS season_name, s.year,
-           (SELECT id FROM discord_events WHERE race_id=rc.id AND is_closed=0 LIMIT 1) AS open_event_id,
-           (SELECT id FROM discord_events WHERE race_id=rc.id LIMIT 1) AS any_event_id
-    FROM races rc
-    JOIN seasons s ON s.id=rc.season_id
-    WHERE s.is_active=1
-    ORDER BY rc.round ASC
-")->fetchAll();
+// Rennen laden
+$races = [];
+try {
+    $races = $db->query("
+        SELECT rc.*, s.name AS season_name, s.year,
+               (SELECT id FROM discord_events WHERE race_id=rc.id AND is_closed=0 LIMIT 1) AS open_event_id,
+               (SELECT id FROM discord_events WHERE race_id=rc.id LIMIT 1) AS any_event_id
+        FROM races rc
+        JOIN seasons s ON s.id=rc.season_id
+        WHERE s.is_active=1
+        ORDER BY rc.round ASC
+    ")->fetchAll();
+} catch (\PDOException $e) {
+    $races = $db->query("SELECT rc.*, s.name AS season_name, s.year, NULL AS open_event_id, NULL AS any_event_id FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE s.is_active=1 ORDER BY rc.round ASC")->fetchAll();
+}
 
 // POST: Event erstellen + an Bot senden
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -148,17 +153,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Aktuelle Events laden
-$events = $db->query("
-    SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time, s.name AS season_name,
-           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='accepted')  AS cnt_yes,
-           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='declined')  AS cnt_no,
-           (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='maybe')     AS cnt_maybe
-    FROM discord_events de
-    JOIN races rc ON rc.id=de.race_id
-    JOIN seasons s ON s.id=rc.season_id
-    ORDER BY de.sent_at DESC LIMIT 20
-")->fetchAll();
+// Tabellen prüfen + Events laden
+$tablesExist = false;
+try {
+    // Prüft ob beide Tabellen mit korrekten Spalten existieren
+    $db->query("SELECT event_id FROM race_signups LIMIT 1");
+    $db->query("SELECT id FROM discord_events LIMIT 1");
+    $tablesExist = true;
+} catch (\PDOException $e) {
+    // Migration nötig
+}
+
+$events = [];
+if ($tablesExist) {
+    $events = $db->query("
+        SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time, s.name AS season_name,
+               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='accepted')  AS cnt_yes,
+               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='declined')  AS cnt_no,
+               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='maybe')     AS cnt_maybe
+        FROM discord_events de
+        JOIN races rc ON rc.id=de.race_id
+        JOIN seasons s ON s.id=rc.season_id
+        ORDER BY de.sent_at DESC LIMIT 20
+    ")->fetchAll();
+}
 
 require_once __DIR__ . '/includes/layout.php';
 $wo = WEATHER_OPTIONS;
@@ -167,6 +185,35 @@ $defaultHrs = getSetting('discord_signup_hours','2');
 <div class="admin-page-title">Race <span style="color:var(--primary)">Anmeldung</span></div>
 <div class="admin-page-sub">Discord Anmeldeformular für das nächste Rennen posten</div>
 
+<?php if (!$tablesExist): ?>
+<div class="notice notice-error mb-3">
+  ❌ <strong>Datenbank-Migration fehlt.</strong>
+  Bitte folgende SQL-Migration in phpMyAdmin ausführen:
+  <pre style="margin-top:8px;font-size:.78rem;background:var(--bg3);padding:10px;border-radius:4px;overflow-x:auto">-- race_signups: event_id + discord_events Tabelle hinzufügen
+ALTER TABLE `race_signups`
+  ADD COLUMN IF NOT EXISTS `event_id` INT NOT NULL DEFAULT 0 AFTER `id`,
+  ADD COLUMN IF NOT EXISTS `discord_avatar` VARCHAR(200) NULL DEFAULT NULL;
+
+-- Foreign Key + Unique Key (falls noch nicht vorhanden)
+ALTER TABLE `race_signups`
+  DROP INDEX IF EXISTS `unique_signup`,
+  ADD UNIQUE KEY IF NOT EXISTS `uq_event_user` (`event_id`, `discord_user_id`);
+
+-- discord_events Tabelle (falls noch nicht vorhanden)
+CREATE TABLE IF NOT EXISTS `discord_events` (
+  `id`          INT AUTO_INCREMENT PRIMARY KEY,
+  `race_id`     INT NOT NULL,
+  `message_id`  VARCHAR(30)  NULL DEFAULT NULL,
+  `channel_id`  VARCHAR(30)  NULL DEFAULT NULL,
+  `thread_id`   VARCHAR(30)  NULL DEFAULT NULL,
+  `deadline`    DATETIME     NULL DEFAULT NULL,
+  `is_closed`   TINYINT(1)   NOT NULL DEFAULT 0,
+  `sent_at`     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  `created_by`  INT          NULL DEFAULT NULL,
+  FOREIGN KEY (`race_id`) REFERENCES `races`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+<?php endif; ?>
 <?php if (!$botReady): ?>
 <div class="notice notice-warning mb-3">
   ⚠️ <strong>Discord Bot nicht konfiguriert.</strong>

@@ -54,5 +54,5 @@ systemctl status simracing-bot
 1. https://discord.com/developers/applications → "New Application"
 2. Bot → "Add Bot" → Token kopieren
 3. Bot → Privileged Gateway Intents: **Server Members Intent** aktivieren
-4. OAuth2 → URL Generator → Scopes: `bot` → Bot Permissions: `Send Messages`, `Read Messages/View Channels`, `Create Public Threads`, `Send Messages in Threads`, `Manage Messages`
+4. OAuth2 → URL Generator → Scopes: `bot` → Bot Permissions: `Send Messages (Nachrichten senden)`, `Read Messages/View Channels (Nachrichtenverlauf anzeigen/Kanäle ansehen)`, `Create Public Threads (Öffentliche Threads erstellen)`, `Send Messages in Threads (Nachrichten in Threads senden)`, `Manage Messages (Nachrichten verwalten)`
 5. Generierten Link aufrufen → Bot in Server einladen
