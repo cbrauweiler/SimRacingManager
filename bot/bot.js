@@ -413,8 +413,8 @@ setInterval(async () => {
 // ============================================================
 // Starten
 // ============================================================
-app.listen(config.port, '127.0.0.1', () => {
-    console.log(`🌐 HTTP-Server auf Port ${config.port}`);
+app.listen(config.port, '0.0.0.0', () => {
+    console.log(`🌐 HTTP-Server auf Port ${config.port} (0.0.0.0)`);
 });
 
 client.login(config.token).catch(e => {

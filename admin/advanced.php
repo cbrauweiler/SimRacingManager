@@ -194,27 +194,41 @@ require_once __DIR__ . '/includes/layout.php';
     $botStatus  = 'Nicht konfiguriert';
     $botOk      = false;
     if ($botEnabled && getSetting('discord_bot_token','')) {
-        // fsockopen statt file_get_contents – funktioniert auch wenn allow_url_fopen deaktiviert
-        $hd = null;
+        $hd      = null;
+        $diagMsg = '';
+
+        // Methode 1: fsockopen auf 127.0.0.1
         try {
             $sock = @fsockopen('127.0.0.1', (int)$botPort, $errno, $errstr, 2);
             if ($sock) {
                 $req = "GET /health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
                 fwrite($sock, $req);
-                $raw = '';
-                while (!feof($sock)) $raw .= fgets($sock, 1024);
+                $raw = ''; $t = time();
+                while (!feof($sock) && (time()-$t)<2) $raw .= fgets($sock, 1024);
                 fclose($sock);
-                // HTTP-Header abtrennen
                 $body = substr($raw, strpos($raw, "\r\n\r\n") + 4);
                 $hd   = $body ? json_decode(trim($body), true) : null;
+                if (!$hd) $diagMsg = 'fsockopen OK aber kein JSON';
+            } else {
+                $diagMsg = "fsockopen fehlgeschlagen: {$errstr} ({$errno})";
             }
-        } catch (\Throwable $e) { /* ignore */ }
+        } catch (\Throwable $e) {
+            $diagMsg = 'fsockopen Exception: ' . $e->getMessage();
+        }
+
+        // Methode 2: file_get_contents als Fallback
+        if (!$hd && ini_get('allow_url_fopen')) {
+            $ctx = stream_context_create(['http'=>['timeout'=>2,'ignore_errors'=>true]]);
+            $raw = @file_get_contents('http://127.0.0.1:'.$botPort.'/health', false, $ctx);
+            $hd  = $raw ? json_decode(trim($raw), true) : null;
+            if ($hd) $diagMsg = 'via file_get_contents';
+        }
 
         if ($hd && ($hd['status'] ?? '') === 'ok') {
             $botStatus = '✅ Online · ' . h($hd['bot_tag'] ?? '') . ' · ' . (int)($hd['open_events'] ?? 0) . ' offene Event(s)';
             $botOk = true;
         } else {
-            $botStatus = '⚠️ Nicht erreichbar (läuft der Bot?)';
+            $botStatus = '⚠️ Nicht erreichbar · ' . h($diagMsg);
         }
     }
     ?>
