@@ -283,7 +283,7 @@ function hofRankColor(int $rank): string {
     WM-Sieger je Saison (ganz oben)
   ============================================================ -->
   <?php if ($champSeasons): ?>
-  <div class="mb-4" style="max-width:900px">
+  <div class="mb-4">
     <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
     <div class="card">
       <div class="card-body" style="padding:0">
