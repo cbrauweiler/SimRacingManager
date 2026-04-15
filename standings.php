@@ -16,6 +16,63 @@ $teamReserveFilter   = $reserveTeam   ? '' : 'AND se.is_reserve = 0';
 // Bonus-SQL live berechnet (Pole + FL anhand Settings)
 $bonusSql = buildBonusSql('re');
 
+// WEC Tiebreaker: bei Punktgleichheit Positionen vergleichen (P1 > P2 > P3 ...)
+function wecSort(array &$standings, PDO $db, int $sid, string $type = 'driver'): void {
+    // Positionen pro Fahrer/Team laden
+    $posMap = [];
+    if ($type === 'driver') {
+        $stmt = $db->prepare("
+            SELECT re.driver_id AS entity_id, re.position, COUNT(*) AS cnt
+            FROM result_entries re
+            JOIN results r ON r.id = re.result_id
+            JOIN races rc ON rc.id = r.race_id AND rc.season_id = ?
+            WHERE re.dnf = 0 AND re.dsq = 0 AND re.position IS NOT NULL
+            GROUP BY re.driver_id, re.position
+        ");
+    } else {
+        $stmt = $db->prepare("
+            SELECT se.team_id AS entity_id, re.position, COUNT(*) AS cnt
+            FROM result_entries re
+            JOIN season_entries se ON se.driver_id = re.driver_id AND se.season_id = ?
+            JOIN results r ON r.id = re.result_id
+            JOIN races rc ON rc.id = r.race_id AND rc.season_id = ?
+            WHERE re.dnf = 0 AND re.dsq = 0 AND re.position IS NOT NULL
+            GROUP BY se.team_id, re.position
+        ");
+    }
+    if ($type === 'driver') {
+        $stmt->execute([$sid]);
+    } else {
+        $stmt->execute([$sid, $sid]);
+    }
+    foreach ($stmt->fetchAll() as $row) {
+        $posMap[$row['entity_id']][(int)$row['position']] = (int)$row['cnt'];
+    }
+
+    $idKey = $type === 'driver' ? 'id' : 'id';
+
+    usort($standings, function($a, $b) use ($posMap, $idKey) {
+        // 1. Punkte
+        $diff = (float)$b['total_pts'] - (float)$a['total_pts'];
+        if (abs($diff) > 0.001) return $diff > 0 ? 1 : -1;
+
+        // 2. WEC-Tiebreaker: Positionen P1, P2, P3 ... vergleichen
+        $aPos = $posMap[$a[$idKey]] ?? [];
+        $bPos = $posMap[$b[$idKey]] ?? [];
+        $maxPos = max(
+            empty($aPos) ? 0 : max(array_keys($aPos)),
+            empty($bPos) ? 0 : max(array_keys($bPos)),
+            20
+        );
+        for ($p = 1; $p <= $maxPos; $p++) {
+            $aC = $aPos[$p] ?? 0;
+            $bC = $bPos[$p] ?? 0;
+            if ($bC !== $aC) return $bC - $aC;
+        }
+        return 0;
+    });
+}
+
 // ----------------------------------------------------------------
 // Fahrerwertung
 // ----------------------------------------------------------------
@@ -46,11 +103,12 @@ if ($sid) {
         WHERE se.season_id = :sid
         {$reserveFilter}
         GROUP BY d.id, d.name, d.nationality, se.number, se.is_reserve, t.name, t.color, t.id
-        ORDER BY total_pts DESC, wins DESC, podiums DESC
+        ORDER BY total_pts DESC
     ";
     $stmt = $db->prepare($sql);
     $stmt->execute([':sid' => $sid, ':sid2' => $sid]);
     $driverStandings = $stmt->fetchAll();
+    wecSort($driverStandings, $db, $sid, 'driver');
 }
 
 // ----------------------------------------------------------------
@@ -82,6 +140,7 @@ if ($sid) {
     $stmt2 = $db->prepare($sql2);
     $stmt2->execute([':sid' => $sid, ':sid2' => $sid]);
     $teamStandings = $stmt2->fetchAll();
+    wecSort($teamStandings, $db, $sid, 'team');
 }
 
 $pageTitle = 'Wertung – ' . getSetting('league_name');

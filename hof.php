@@ -160,17 +160,84 @@ foreach ($teamChampions as $row) {
     }
 }
 
+// WEC Tiebreaker: Positionen je Saison laden und Champions korrekt ermitteln
+function hofWecBest(array $rows, PDO $db, int $sid, string $type): ?array {
+    if (empty($rows)) return null;
+    if (count($rows) === 1) return $rows[0];
+
+    // Positionen laden
+    if ($type === 'driver') {
+        $stmt = $db->prepare("
+            SELECT re.driver_id AS eid, re.position, COUNT(*) AS cnt
+            FROM result_entries re
+            JOIN results r ON r.id=re.result_id
+            JOIN races rc ON rc.id=r.race_id AND rc.season_id=?
+            WHERE re.dnf=0 AND re.dsq=0 AND re.position IS NOT NULL
+            GROUP BY re.driver_id, re.position
+        ");
+        $stmt->execute([$sid]);
+    } else {
+        $stmt = $db->prepare("
+            SELECT se.team_id AS eid, re.position, COUNT(*) AS cnt
+            FROM result_entries re
+            JOIN season_entries se ON se.driver_id=re.driver_id AND se.season_id=?
+            JOIN results r ON r.id=re.result_id
+            JOIN races rc ON rc.id=r.race_id AND rc.season_id=?
+            WHERE re.dnf=0 AND re.dsq=0 AND re.position IS NOT NULL
+            GROUP BY se.team_id, re.position
+        ");
+        $stmt->execute([$sid, $sid]);
+    }
+    $posMap = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $posMap[$row['eid']][(int)$row['position']] = (int)$row['cnt'];
+    }
+
+    $idKey = $type === 'driver' ? 'driver_id' : 'team_id';
+    usort($rows, function($a, $b) use ($posMap, $idKey) {
+        $diff = (float)$b['total_pts'] - (float)$a['total_pts'];
+        if (abs($diff) > 0.001) return $diff > 0 ? 1 : -1;
+        $aPos = $posMap[$a[$idKey]] ?? [];
+        $bPos = $posMap[$b[$idKey]] ?? [];
+        $max  = max(empty($aPos)?0:max(array_keys($aPos)), empty($bPos)?0:max(array_keys($bPos)), 20);
+        for ($p = 1; $p <= $max; $p++) {
+            $diff2 = ($bPos[$p]??0) - ($aPos[$p]??0);
+            if ($diff2 !== 0) return $diff2;
+        }
+        return 0;
+    });
+    return $rows[0];
+}
+
+// Pro Saison den WEC-korrekten Champion ermitteln
+// Alle Fahrer-Kandidaten pro Saison gruppieren
+$driversBySeason = [];
+foreach ($driverChampions as $row) {
+    $driversBySeason[$row['sid']][] = $row;
+}
+$teamsBySeason = [];
+foreach ($teamChampions as $row) {
+    $teamsBySeason[$row['sid']][] = $row;
+}
+
 // Saisons mit Ergebnissen für die Champions-Tabelle
 $champSeasons = [];
-foreach ($driverChampBySeaon as $sid => $dc) {
-    $champSeasons[$sid] = [
-        'sid'    => $sid,
-        'name'   => $dc['season_name'],
-        'year'   => $dc['year'],
-        'driver' => $dc,
-        'team'   => $teamChampBySeason[$sid] ?? null,
-    ];
+foreach ($driversBySeason as $sid => $dRows) {
+    $bestDriver = hofWecBest($dRows, $db, $sid, 'driver');
+    $tRows      = $teamsBySeason[$sid] ?? [];
+    $bestTeam   = $tRows ? hofWecBest($tRows, $db, $sid, 'team') : null;
+    if ($bestDriver) {
+        $champSeasons[$sid] = [
+            'sid'    => $sid,
+            'name'   => $bestDriver['season_name'],
+            'year'   => $bestDriver['year'],
+            'driver' => $bestDriver,
+            'team'   => $bestTeam,
+        ];
+    }
 }
+// Neueste Saison zuerst
+krsort($champSeasons);
 
 $pageTitle = 'Hall of Fame – ' . getSetting('league_name');
 require_once __DIR__ . '/includes/header.php';
