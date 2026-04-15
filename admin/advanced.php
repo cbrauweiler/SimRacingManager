@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('discord_bot_port',    trim($_POST['discord_bot_port']    ?? '3001'));
         setSetting('discord_bot_enabled', isset($_POST['discord_bot_enabled']) ? '1' : '0');
         setSetting('discord_signup_hours',trim($_POST['discord_signup_hours'] ?? '2'));
+        setSetting('discord_bot_mention_role', trim($_POST['discord_bot_mention_role'] ?? ''));
 
         // config.json für Bot schreiben
         $botToken  = getSetting('discord_bot_token','');
@@ -241,6 +242,13 @@ require_once __DIR__ . '/includes/layout.php';
         <input type="number" name="discord_bot_port" class="form-control"
                value="<?= h(getSetting('discord_bot_port','3001')) ?>" min="1024" max="65535" style="max-width:120px"/>
         <div class="form-hint">Standard: 3001 (muss frei sein)</div>
+      </div>
+      <div class="form-group">
+        <label>Standard Discord-Rollen-ID (für Markierung)</label>
+        <input type="text" name="discord_bot_mention_role" class="form-control"
+               value="<?= h(getSetting('discord_bot_mention_role','')) ?>"
+               placeholder="z.B. 1234567890123456789"/>
+        <div class="form-hint">Wird als Standardwert im Anmeldeformular vorausgefüllt</div>
       </div>
       <div class="form-group">
         <label>Standard-Anmeldefrist (Stunden vor Rennstart)</label>

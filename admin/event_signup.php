@@ -58,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $wxQuali    = array_map(fn($i) => $_POST["wx_quali_{$i}"]    ?? 'Clear', range(1,5));
         $wxRace     = array_map(fn($i) => $_POST["wx_race_{$i}"]     ?? 'Clear', range(1,5));
         $deadlineHrs  = (int)($_POST['deadline_hours'] ?? 2);
+        $mentionRole  = trim($_POST['mention_role'] ?? '');
 
         $race = $db->prepare("SELECT rc.*,s.name AS season_name,s.year FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE rc.id=?");
         $race->execute([$raceId]); $race=$race->fetch();
@@ -144,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $evStmt->execute([$eventId]); $ev = $evStmt->fetch();
         if ($ev) {
             // Bot anweisen Nachricht zu löschen
-            $payload = ['event_id'=>$eventId,'message_id'=>$ev['message_id'],'channel_id'=>$ev['channel_id'],'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
+            $payload = ['event_id'=>$eventId,'message_id'=>$ev['message_id'],'channel_id'=>$ev['channel_id'],'thread_id'=>$ev['thread_id']??null,'bot_secret'=>substr(hash('sha256',$botToken),0,32)];
             $ctx = stream_context_create(['http'=>['method'=>'POST','header'=>"Content-Type: application/json\r\n",'content'=>json_encode($payload),'timeout'=>5,'ignore_errors'=>true]]);
             @file_get_contents('http://127.0.0.1:'.$botPort.'/delete-event', false, $ctx);
             $db->prepare("DELETE FROM discord_events WHERE id=?")->execute([$eventId]);
@@ -246,6 +247,14 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
             </option>
             <?php endforeach; ?>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label>📣 Discord-Rolle markieren</label>
+          <input type="text" name="mention_role" class="form-control"
+                 value="<?= h(getSetting('discord_bot_mention_role','')) ?>"
+                 placeholder="z.B. 1234567890123456789"/>
+          <div class="form-hint">Rollen-ID (Rechtsklick auf Rolle → ID kopieren). Leer = keine Markierung.</div>
         </div>
 
         <div class="divider"></div>

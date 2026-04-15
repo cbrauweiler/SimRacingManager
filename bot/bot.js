@@ -273,7 +273,13 @@ app.post('/post-event', async (req, res) => {
 
         const embed   = buildEventMessage(data, { accepted:[], declined:[], maybe:[] });
         const buttons = buildButtons(false);
-        const msg     = await channel.send({ embeds: [embed], components: [buttons] });
+        // Rolle markieren (als separater Content vor dem Embed)
+        const mentionContent = data.mention_role ? `<@&${data.mention_role}>` : undefined;
+        const msg = await channel.send({
+            content:    mentionContent,
+            embeds:     [embed],
+            components: [buttons],
+        });
 
         // Thread für Log erstellen
         let thread = null;
@@ -333,10 +339,20 @@ app.post('/close-event', async (req, res) => {
     }
 });
 
-// POST /delete-event – Nachricht löschen
+// POST /delete-event – Nachricht + Thread löschen
 app.post('/delete-event', async (req, res) => {
-    const { event_id, message_id, channel_id } = req.body;
+    const { event_id, message_id, channel_id, thread_id } = req.body;
     try {
+        // Thread zuerst löschen (bevor die Elternnachricht weg ist)
+        if (thread_id) {
+            try {
+                const thread = await client.channels.fetch(thread_id);
+                await thread.delete('Anmeldung entfernt');
+            } catch(e) {
+                console.warn(`Thread ${thread_id} konnte nicht gelöscht werden:`, e.message);
+            }
+        }
+        // Nachricht löschen
         const channel = await client.channels.fetch(channel_id);
         const msg     = await channel.messages.fetch(message_id);
         await msg.delete();
