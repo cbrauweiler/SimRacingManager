@@ -110,6 +110,68 @@ $topWinRate = $db->query("
     ORDER BY val DESC LIMIT 10
 ")->fetchAll();
 
+// ---- WM-Sieger je Saison ----
+// Fahrer-Champion: höchste Gesamtpunkte pro Saison
+$driverChampions = $db->query("
+    SELECT s.id AS sid, s.name AS season_name, s.year,
+           d.id AS driver_id, d.name AS driver_name, d.photo_path, d.nationality,
+           t.name AS team_name, t.color AS team_color,
+           COALESCE(SUM({$bsql}), 0) AS total_pts,
+           COUNT(CASE WHEN re.position=1 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS wins
+    FROM seasons s
+    JOIN season_entries se ON se.season_id = s.id AND se.is_reserve = 0
+    JOIN drivers d ON d.id = se.driver_id
+    LEFT JOIN teams t ON t.id = se.team_id
+    LEFT JOIN result_entries re ON re.driver_id = d.id
+        AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
+    GROUP BY s.id, s.name, s.year, d.id, d.name, d.photo_path, d.nationality, t.name, t.color
+    HAVING total_pts > 0
+    ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
+")->fetchAll();
+
+// Pro Saison nur den Ersten behalten
+$driverChampBySeaon = [];
+foreach ($driverChampions as $row) {
+    if (!isset($driverChampBySeaon[$row['sid']])) {
+        $driverChampBySeaon[$row['sid']] = $row;
+    }
+}
+
+// Team-Champion: höchste Gesamtpunkte aller Fahrer eines Teams pro Saison
+$teamChampions = $db->query("
+    SELECT s.id AS sid, s.name AS season_name, s.year,
+           t.id AS team_id, t.name AS team_name, t.color AS team_color, t.logo_path,
+           COALESCE(SUM({$bsql}), 0) AS total_pts,
+           COUNT(CASE WHEN re.position=1 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS wins
+    FROM seasons s
+    JOIN teams t ON t.season_id = s.id
+    LEFT JOIN season_entries se ON se.team_id = t.id AND se.season_id = s.id AND se.is_reserve = 0
+    LEFT JOIN result_entries re ON re.driver_id = se.driver_id
+        AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
+    GROUP BY s.id, s.name, s.year, t.id, t.name, t.color, t.logo_path
+    HAVING total_pts > 0
+    ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
+")->fetchAll();
+
+$teamChampBySeason = [];
+foreach ($teamChampions as $row) {
+    if (!isset($teamChampBySeason[$row['sid']])) {
+        $teamChampBySeason[$row['sid']] = $row;
+    }
+}
+
+// Saisons mit Ergebnissen für die Champions-Tabelle
+$champSeasons = [];
+foreach ($driverChampBySeaon as $sid => $dc) {
+    $champSeasons[$sid] = [
+        'sid'    => $sid,
+        'name'   => $dc['season_name'],
+        'year'   => $dc['year'],
+        'driver' => $dc,
+        'team'   => $teamChampBySeason[$sid] ?? null,
+    ];
+}
+
 $pageTitle = 'Hall of Fame – ' . getSetting('league_name');
 require_once __DIR__ . '/includes/header.php';
 
@@ -203,5 +265,88 @@ function hofRankColor(int $rank): string {
   <?php endforeach; ?>
   </div>
 </div>
+
+<?php if ($champSeasons): ?>
+<div class="mt-4">
+  <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
+  <div class="card">
+    <div class="card-body" style="padding:0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:140px">Saison</th>
+            <th>🏎️ Fahrer-Champion</th>
+            <th style="width:120px">Punkte</th>
+            <th>🚗 Team-Champion</th>
+            <th style="width:120px">Punkte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($champSeasons as $cs): ?>
+          <?php $dc = $cs['driver']; $tc = $cs['team']; ?>
+          <tr>
+            <td>
+              <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
+              <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <?= hofAvatar($dc, 36) ?>
+                <div>
+                  <a href="<?= SITE_URL ?>/driver.php?id=<?= $dc['driver_id'] ?>"
+                     style="font-weight:700;color:var(--text);text-decoration:none"><?= h($dc['driver_name']) ?></a>
+                  <?php if ($dc['team_name']): ?>
+                  <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+                    <span style="width:8px;height:8px;border-radius:50%;background:<?= h($dc['team_color']??'#666') ?>;display:inline-block;flex-shrink:0"></span>
+                    <span class="text-muted" style="font-size:.78rem"><?= h($dc['team_name']) ?></span>
+                  </div>
+                  <?php endif; ?>
+                </div>
+                <span style="margin-left:4px;font-size:.75rem;color:var(--secondary)">
+                  <?php if($dc['wins']>0): ?>🥇 <?= (int)$dc['wins'] ?>x<?php endif; ?>
+                </span>
+              </div>
+            </td>
+            <td>
+              <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--primary)">
+                <?= number_format((float)$dc['total_pts'],1) ?>
+              </span>
+              <span class="text-muted" style="font-size:.75rem"> Pkt</span>
+            </td>
+            <td>
+              <?php if ($tc): ?>
+              <div style="display:flex;align-items:center;gap:10px">
+                <?php if($tc['logo_path']): ?>
+                  <img src="<?= h($tc['logo_path']) ?>" style="height:32px;width:32px;object-fit:contain;flex-shrink:0" alt=""/>
+                <?php else: ?>
+                  <div style="width:32px;height:32px;border-radius:50%;background:<?= h($tc['team_color']??'#666') ?>;flex-shrink:0"></div>
+                <?php endif; ?>
+                <div>
+                  <span style="font-weight:700"><?= h($tc['team_name']) ?></span>
+                  <?php if($tc['wins']>0): ?>
+                  <div class="text-muted" style="font-size:.75rem">🥇 <?= (int)$tc['wins'] ?>x Sieg</div>
+                  <?php endif; ?>
+                </div>
+              </div>
+              <?php else: ?>
+              <span class="text-muted">–</span>
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if ($tc): ?>
+              <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--secondary)">
+                <?= number_format((float)$tc['total_pts'],1) ?>
+              </span>
+              <span class="text-muted" style="font-size:.75rem"> Pkt</span>
+              <?php else: ?>–<?php endif; ?>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
