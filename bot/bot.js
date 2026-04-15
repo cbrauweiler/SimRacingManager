@@ -43,6 +43,7 @@ const WEATHER_EMOJIS = {
     OvercastRain:      '🌧️',
     OvercastHeavyRain: '💧',
     OvercastStorm:     '⛈️',
+    Night:             '🌙',
 };
 
 // ============================================================
@@ -75,9 +76,13 @@ function buildEventMessage(data, lists) {
     if (data.time_race)     zeitplan += `\`${data.time_race}\` Rennen\n`;
 
     // Wetter
-    const wxTrain = data.wx_training?.emoji || '☀️';
-    const wxQuali = data.wx_quali?.emoji    || '☀️';
-    const wxRace  = data.wx_race?.emoji     || '☀️';
+    // wx_* sind Arrays mit 5 Slots → Emojis zusammensetzen
+    const wxSlots = (arr) => Array.isArray(arr)
+        ? arr.map(s => s.emoji || WEATHER_EMOJIS[s.key] || '❓').join(' ')
+        : (arr?.emoji || '☀️');
+    const wxTrain = wxSlots(data.wx_training);
+    const wxQuali = wxSlots(data.wx_quali);
+    const wxRace  = wxSlots(data.wx_race);
 
     // Teilnehmerlisten
     const yesStr   = accepted.length ? accepted.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Zusagen*';
@@ -90,9 +95,9 @@ function buildEventMessage(data, lists) {
         .setDescription(`**${data.season_name}** · ${formatDate(data.race_date)}`)
         .addFields(
             { name: '⏰ Zeitplan', value: zeitplan || '–', inline: false },
-            { name: `${wxTrain} Training`, value: data.wx_training?.label?.split('(')[0]?.trim() || '–', inline: true },
-            { name: `${wxQuali} Qualifying`, value: data.wx_quali?.label?.split('(')[0]?.trim() || '–', inline: true },
-            { name: `${wxRace} Rennen`, value: data.wx_race?.label?.split('(')[0]?.trim() || '–', inline: true },
+            { name: '🌤️ Wetter Training',    value: wxTrain, inline: false },
+            { name: '🌤️ Wetter Qualifying',   value: wxQuali, inline: false },
+            { name: '🌤️ Wetter Rennen',        value: wxRace,  inline: false },
             { name: `✅ Zusagen (${accepted.length})`, value: yesStr,   inline: false },
             { name: `❌ Absagen (${declined.length})`, value: noStr,    inline: false },
             { name: `❓ Vielleicht (${maybe.length})`, value: maybeStr, inline: false },

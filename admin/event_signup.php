@@ -18,6 +18,7 @@ define('WEATHER_OPTIONS', [
     'OvercastRain'        => ['emoji'=>'🌧️', 'label'=>'Regen (Overcast & Rain)'],
     'OvercastHeavyRain'   => ['emoji'=>'💧',  'label'=>'Starkregen (Overcast & Heavy Rain)'],
     'OvercastStorm'       => ['emoji'=>'⛈️',  'label'=>'Gewitter (Overcast & Storm)'],
+    'Night'               => ['emoji'=>'🌙',  'label'=>'Nacht (Night)'],
 ]);
 
 $botEnabled  = getSetting('discord_bot_enabled','0') === '1';
@@ -52,9 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $trainTime    = trim($_POST['time_training'] ?? '');
         $briefTime    = trim($_POST['time_briefing'] ?? '');
         $raceTime     = trim($_POST['time_race']     ?? '');
-        $wxTraining   = $_POST['wx_training']   ?? 'Clear';
-        $wxQuali      = $_POST['wx_quali']      ?? 'Clear';
-        $wxRace       = $_POST['wx_race']       ?? 'Clear';
+        // 5 Wetter-Slots je Session
+        $wxTraining = array_map(fn($i) => $_POST["wx_training_{$i}"] ?? 'Clear', range(1,5));
+        $wxQuali    = array_map(fn($i) => $_POST["wx_quali_{$i}"]    ?? 'Clear', range(1,5));
+        $wxRace     = array_map(fn($i) => $_POST["wx_race_{$i}"]     ?? 'Clear', range(1,5));
         $deadlineHrs  = (int)($_POST['deadline_hours'] ?? 2);
 
         $race = $db->prepare("SELECT rc.*,s.name AS season_name,s.year FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE rc.id=?");
@@ -84,9 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'time_training' => $trainTime,
             'time_briefing' => $briefTime,
             'time_race'     => $raceTime,
-            'wx_training'   => ['key'=>$wxTraining,  'emoji'=>$wo[$wxTraining]['emoji'],  'label'=>$wo[$wxTraining]['label']],
-            'wx_quali'      => ['key'=>$wxQuali,     'emoji'=>$wo[$wxQuali]['emoji'],     'label'=>$wo[$wxQuali]['label']],
-            'wx_race'       => ['key'=>$wxRace,      'emoji'=>$wo[$wxRace]['emoji'],      'label'=>$wo[$wxRace]['label']],
+            'wx_training'   => array_map(fn($k) => ['key'=>$k,'emoji'=>$wo[$k]['emoji']??'❓'], $wxTraining),
+            'wx_quali'      => array_map(fn($k) => ['key'=>$k,'emoji'=>$wo[$k]['emoji']??'❓'], $wxQuali),
+            'wx_race'       => array_map(fn($k) => ['key'=>$k,'emoji'=>$wo[$k]['emoji']??'❓'], $wxRace),
             'deadline'      => $deadline,
             'deadline_hours'=> $deadlineHrs,
             'channel_id'    => $botChannel,
@@ -264,19 +266,26 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
         </div>
 
         <div class="divider"></div>
-        <div class="form-group"><label style="font-weight:700;color:var(--text)">🌤️ Wetter</label></div>
+        <div class="form-group"><label style="font-weight:700;color:var(--text)">🌤️ Wetter (5 Zeitslots je Session: Verlauf von Beginn bis Ende)</label></div>
         <?php foreach ([
-            ['key'=>'wx_training', 'label'=>'Training'],
-            ['key'=>'wx_quali',    'label'=>'Qualifying'],
-            ['key'=>'wx_race',     'label'=>'Rennen'],
+            ['prefix'=>'wx_training', 'label'=>'🏋️ Training'],
+            ['prefix'=>'wx_quali',    'label'=>'⏱️ Qualifying'],
+            ['prefix'=>'wx_race',     'label'=>'🏁 Rennen'],
         ] as $wx): ?>
         <div class="form-group">
           <label><?= $wx['label'] ?></label>
-          <select name="<?= $wx['key'] ?>" class="form-control">
-            <?php foreach ($wo as $key => $opt): ?>
-            <option value="<?= $key ?>"><?= $opt['emoji'] ?> <?= h($opt['label']) ?></option>
-            <?php endforeach; ?>
-          </select>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <?php for ($s=1; $s<=5; $s++): ?>
+            <div style="flex:1;min-width:100px">
+              <div class="text-muted" style="font-size:.7rem;margin-bottom:3px;text-align:center">Slot <?= $s ?></div>
+              <select name="<?= $wx['prefix'] ?>_<?= $s ?>" class="form-control" style="padding:5px 6px;font-size:.82rem">
+                <?php foreach ($wo as $key => $opt): ?>
+                <option value="<?= $key ?>"><?= $opt['emoji'] ?> <?= h($opt['label']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <?php endfor; ?>
+          </div>
         </div>
         <?php endforeach; ?>
 
