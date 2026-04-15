@@ -52,17 +52,10 @@ $socialSvgs = [
       </div>
       <?php endif; ?>
     </div>
-    <div class="footer-nav">
-      <div class="footer-nav-title">Navigation</div>
-      <a href="<?= SITE_URL ?>/news.php">News</a>
-      <a href="<?= SITE_URL ?>/calendar.php">Rennkalender</a>
-      <a href="<?= SITE_URL ?>/standings.php">WM Wertung</a>
-      <a href="<?= SITE_URL ?>/teams.php">Teams &amp; Fahrer</a>
-      <a href="<?= SITE_URL ?>/info.php">Liga Info</a>
-    </div>
+
   </div>
   <div class="footer-copy container">
-    &copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by <a href="https://github.com/cbrauweiler/SimRacingManager" target="_blank">SimRace Manager</a> <?= APP_VERSION ?>
+    &copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by SimRace Manager <?= APP_VERSION ?>
   </div>
 </footer>
 
