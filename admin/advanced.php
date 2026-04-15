@@ -9,7 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'bot') {
-        setSetting('discord_bot_token',   trim($_POST['discord_bot_token']   ?? ''));
+        $newToken = trim($_POST['discord_bot_token'] ?? '');
+        if ($newToken !== '') setSetting('discord_bot_token', $newToken);
         setSetting('discord_bot_channel', trim($_POST['discord_bot_channel'] ?? ''));
         setSetting('discord_bot_port',    trim($_POST['discord_bot_port']    ?? '3001'));
         setSetting('discord_bot_enabled', isset($_POST['discord_bot_enabled']) ? '1' : '0');
