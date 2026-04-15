@@ -253,7 +253,8 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 | v0.9 | MFA Login Absicherung |
 | v1.0 | Import aus Racing League Tools (F1, ACC, etc.) |
 | v1.1 | Menü (Reihenfolge flexibel anpassbar) |
-| v1.2 | Hall of Fame (Siege, Punkte, Podien, Schnellste Runden |
+| v1.2 | Hall of Fame (Siege, Punkte, Podien, Schnellste Runden, etc.) |
+| v1.3 | GEPLANT: Discord Bot zur Anmeldeverwaltung von Liga-Rennen |
 
 ---
 
