@@ -124,6 +124,7 @@ $driverChampions = $db->query("
     LEFT JOIN teams t ON t.id = se.team_id
     LEFT JOIN result_entries re ON re.driver_id = d.id
         AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
+    WHERE s.is_active = 0
     GROUP BY s.id, s.name, s.year, d.id, d.name, d.photo_path, d.nationality, t.name, t.color
     HAVING total_pts > 0
     ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
@@ -148,6 +149,7 @@ $teamChampions = $db->query("
     LEFT JOIN season_entries se ON se.team_id = t.id AND se.season_id = s.id AND se.is_reserve = 0
     LEFT JOIN result_entries re ON re.driver_id = se.driver_id
         AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
+    WHERE s.is_active = 0
     GROUP BY s.id, s.name, s.year, t.id, t.name, t.color, t.logo_path
     HAVING total_pts > 0
     ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
@@ -281,7 +283,7 @@ function hofRankColor(int $rank): string {
     WM-Sieger je Saison (ganz oben)
   ============================================================ -->
   <?php if ($champSeasons): ?>
-  <div class="mb-4">
+  <div class="mb-4" style="max-width:900px">
     <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
     <div class="card">
       <div class="card-body" style="padding:0">
