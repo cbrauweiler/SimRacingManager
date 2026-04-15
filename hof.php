@@ -311,6 +311,12 @@ function hofRankColor(int $rank): string {
             <td>
               <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
               <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
+			</td>
+		  </td>
+		</tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="grid-2" style="gap:20px">
   <?php foreach ($categories as $cat):
@@ -408,13 +414,7 @@ function hofRankColor(int $rank): string {
               </span>
               <span class="text-muted" style="font-size:.75rem"> Pkt</span>
               <?php else: ?>–<?php endif; ?>
-            </td>
-          </tr>
           <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
 <?php endif; ?>
 
