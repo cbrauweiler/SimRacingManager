@@ -277,46 +277,102 @@ function hofRankColor(int $rank): string {
     <?php endif; ?>
   </div>
 
-  <?php
-  $categories = [
-      ['data'=>$topPoints,  'title'=>'🏆 Meiste Punkte',       'unit'=>'Pkt',    'format'=>fn($v)=>number_format((float)$v,1)],
-      ['data'=>$topWins,    'title'=>'🥇 Meiste Siege',        'unit'=>'Siege',  'format'=>fn($v)=>(int)$v],
-      ['data'=>$topPodiums, 'title'=>'🥈 Meiste Podien',       'unit'=>'Podien', 'format'=>fn($v)=>(int)$v],
-      ['data'=>$topPoles,   'title'=>'⚡ Meiste Pole Positions','unit'=>'Poles',  'format'=>fn($v)=>(int)$v],
-      ['data'=>$topFL,      'title'=>'⚡ Meiste Fastest Laps',  'unit'=>'FL',     'format'=>fn($v)=>(int)$v],
-      ['data'=>$topStarts,  'title'=>'🏁 Meiste Starts',       'unit'=>'Starts', 'format'=>fn($v)=>(int)$v],
-      ['data'=>$topWinRate, 'title'=>'📈 Beste Siegquote',     'unit'=>'%',      'format'=>fn($v)=>$v.'%', 'sub'=>fn($r)=>'('.(int)$r['wins'].' von '.(int)$r['starts'].' Starts)'],
-  ];
-  ?>
-
-<?php if ($champSeasons): ?>
-<div class="mt-4">
-  <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
-  <div class="card">
-    <div class="card-body" style="padding:0">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width:140px">Saison</th>
-            <th>🏎️ Fahrer-Champion</th>
-            <th style="width:120px">Punkte</th>
-            <th>🚗 Team-Champion</th>
-            <th style="width:120px">Punkte</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($champSeasons as $cs): ?>
-          <?php $dc = $cs['driver']; $tc = $cs['team']; ?>
-          <tr>
-            <td>
-              <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
-              <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
-			</td>
-		  </td>
-		</tbody>
-      </table>
+  <!-- ============================================================
+    WM-Sieger je Saison (ganz oben)
+  ============================================================ -->
+  <?php if ($champSeasons): ?>
+  <div class="mb-4">
+    <div class="section-title mb-3">🏆 <span>WM-Sieger</span> je Saison</div>
+    <div class="card">
+      <div class="card-body" style="padding:0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:140px">Saison</th>
+              <th>🏎️ Fahrer-Champion</th>
+              <th style="width:120px">Punkte</th>
+              <th>🚗 Team-Champion</th>
+              <th style="width:120px">Punkte</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($champSeasons as $cs): ?>
+            <?php $dc = $cs['driver']; $tc = $cs['team']; ?>
+            <tr>
+              <td>
+                <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
+                <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
+              </td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <?= hofAvatar($dc, 36) ?>
+                  <div>
+                    <a href="<?= SITE_URL ?>/driver.php?id=<?= $dc['driver_id'] ?>"
+                       style="font-weight:700;color:var(--text);text-decoration:none"><?= h($dc['driver_name']) ?></a>
+                    <?php if ($dc['team_name']): ?>
+                    <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+                      <span style="width:8px;height:8px;border-radius:50%;background:<?= h($dc['team_color']??'#666') ?>;display:inline-block;flex-shrink:0"></span>
+                      <span class="text-muted" style="font-size:.78rem"><?= h($dc['team_name']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                  </div>
+                  <?php if($dc['wins']>0): ?>
+                  <span style="font-size:.75rem;color:var(--secondary);margin-left:4px">🥇 <?= (int)$dc['wins'] ?>x</span>
+                  <?php endif; ?>
+                </div>
+              </td>
+              <td>
+                <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--primary)"><?= number_format((float)$dc['total_pts'],1) ?></span>
+                <span class="text-muted" style="font-size:.75rem"> Pkt</span>
+              </td>
+              <td>
+                <?php if ($tc): ?>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <?php if($tc['logo_path']): ?>
+                    <img src="<?= h($tc['logo_path']) ?>" style="height:32px;width:32px;object-fit:contain;flex-shrink:0" alt=""/>
+                  <?php else: ?>
+                    <div style="width:32px;height:32px;border-radius:50%;background:<?= h($tc['team_color']??'#666') ?>;flex-shrink:0"></div>
+                  <?php endif; ?>
+                  <div>
+                    <span style="font-weight:700"><?= h($tc['team_name']) ?></span>
+                    <?php if($tc['wins']>0): ?>
+                    <div class="text-muted" style="font-size:.75rem">🥇 <?= (int)$tc['wins'] ?>x Sieg</div>
+                    <?php endif; ?>
+                  </div>
+                </div>
+                <?php else: ?>
+                <span class="text-muted">–</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($tc): ?>
+                <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--secondary)"><?= number_format((float)$tc['total_pts'],1) ?></span>
+                <span class="text-muted" style="font-size:.75rem"> Pkt</span>
+                <?php else: ?>–<?php endif; ?>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
+  <?php endif; ?>
+
+  <!-- ============================================================
+    Statistik-Kacheln
+  ============================================================ -->
+  <?php
+  $categories = [
+      ['data'=>$topPoints,  'title'=>'🏆 Meiste Punkte',        'format'=>fn($v)=>number_format((float)$v,1)],
+      ['data'=>$topWins,    'title'=>'🥇 Meiste Siege',         'format'=>fn($v)=>(int)$v],
+      ['data'=>$topPodiums, 'title'=>'🥈 Meiste Podien',        'format'=>fn($v)=>(int)$v],
+      ['data'=>$topPoles,   'title'=>'⚡ Meiste Pole Positions', 'format'=>fn($v)=>(int)$v],
+      ['data'=>$topFL,      'title'=>'⚡ Meiste Fastest Laps',   'format'=>fn($v)=>(int)$v],
+      ['data'=>$topStarts,  'title'=>'🏁 Meiste Starts',        'format'=>fn($v)=>(int)$v],
+      ['data'=>$topWinRate, 'title'=>'📈 Beste Siegquote',      'format'=>fn($v)=>$v.'%', 'sub'=>fn($r)=>'('.(int)$r['wins'].' von '.(int)$r['starts'].' Starts)'],
+  ];
+  ?>
 
   <div class="grid-2" style="gap:20px">
   <?php foreach ($categories as $cat):
@@ -346,7 +402,6 @@ function hofRankColor(int $rank): string {
           <?php elseif($d['nationality']): ?>
           <div class="text-muted" style="font-size:.72rem"><?= h($d['nationality']) ?></div>
           <?php endif; ?>
-          <!-- Balken -->
           <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
             <div style="height:100%;width:<?= $barPct ?>%;background:<?= $rankCol==='var(--text2)' ? 'var(--primary)' : $rankCol ?>;border-radius:2px;transition:width .4s"></div>
           </div>
@@ -360,62 +415,7 @@ function hofRankColor(int $rank): string {
   </div>
   <?php endforeach; ?>
   </div>
-</div>
 
-
-            </td>
-            <td>
-              <div style="display:flex;align-items:center;gap:10px">
-                <?= hofAvatar($dc, 36) ?>
-                <div>
-                  <a href="<?= SITE_URL ?>/driver.php?id=<?= $dc['driver_id'] ?>"
-                     style="font-weight:700;color:var(--text);text-decoration:none"><?= h($dc['driver_name']) ?></a>
-                  <?php if ($dc['team_name']): ?>
-                  <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
-                    <span style="width:8px;height:8px;border-radius:50%;background:<?= h($dc['team_color']??'#666') ?>;display:inline-block;flex-shrink:0"></span>
-                    <span class="text-muted" style="font-size:.78rem"><?= h($dc['team_name']) ?></span>
-                  </div>
-                  <?php endif; ?>
-                </div>
-                <span style="margin-left:4px;font-size:.75rem;color:var(--secondary)">
-                  <?php if($dc['wins']>0): ?>🥇 <?= (int)$dc['wins'] ?>x<?php endif; ?>
-                </span>
-              </div>
-            </td>
-            <td>
-              <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--primary)">
-                <?= number_format((float)$dc['total_pts'],1) ?>
-              </span>
-              <span class="text-muted" style="font-size:.75rem"> Pkt</span>
-            </td>
-            <td>
-              <?php if ($tc): ?>
-              <div style="display:flex;align-items:center;gap:10px">
-                <?php if($tc['logo_path']): ?>
-                  <img src="<?= h($tc['logo_path']) ?>" style="height:32px;width:32px;object-fit:contain;flex-shrink:0" alt=""/>
-                <?php else: ?>
-                  <div style="width:32px;height:32px;border-radius:50%;background:<?= h($tc['team_color']??'#666') ?>;flex-shrink:0"></div>
-                <?php endif; ?>
-                <div>
-                  <span style="font-weight:700"><?= h($tc['team_name']) ?></span>
-                  <?php if($tc['wins']>0): ?>
-                  <div class="text-muted" style="font-size:.75rem">🥇 <?= (int)$tc['wins'] ?>x Sieg</div>
-                  <?php endif; ?>
-                </div>
-              </div>
-              <?php else: ?>
-              <span class="text-muted">–</span>
-              <?php endif; ?>
-            </td>
-            <td>
-              <?php if ($tc): ?>
-              <span style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--secondary)">
-                <?= number_format((float)$tc['total_pts'],1) ?>
-              </span>
-              <span class="text-muted" style="font-size:.75rem"> Pkt</span>
-              <?php else: ?>–<?php endif; ?>
-          <?php endforeach; ?>
 </div>
-<?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
