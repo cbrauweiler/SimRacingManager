@@ -15,7 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('discord_bot_port',    trim($_POST['discord_bot_port']    ?? '3001'));
         setSetting('discord_bot_enabled', isset($_POST['discord_bot_enabled']) ? '1' : '0');
         setSetting('discord_signup_hours',trim($_POST['discord_signup_hours'] ?? '2'));
-        setSetting('discord_bot_mention_role', trim($_POST['discord_bot_mention_role'] ?? ''));
+        setSetting('discord_bot_mention_role',    trim($_POST['discord_bot_mention_role']    ?? ''));
+        setSetting('discord_default_time_training', trim($_POST['discord_default_time_training'] ?? ''));
+        setSetting('discord_default_time_briefing', trim($_POST['discord_default_time_briefing'] ?? ''));
+        setSetting('discord_default_time_race',     trim($_POST['discord_default_time_race']     ?? ''));
 
         // config.json für Bot schreiben
         $botToken  = getSetting('discord_bot_token','');
@@ -282,6 +285,24 @@ require_once __DIR__ . '/includes/layout.php';
         <label>Standard-Anmeldefrist (Stunden vor Rennstart)</label>
         <input type="number" name="discord_signup_hours" class="form-control"
                value="<?= h(getSetting('discord_signup_hours','2')) ?>" min="0" max="72" style="max-width:120px"/>
+      </div>
+    </div>
+    <div class="form-group"><label style="font-weight:700;color:var(--text)">⏰ Standard-Uhrzeiten (Vorausfüllung im Anmeldeformular)</label></div>
+    <div class="form-row cols-3">
+      <div class="form-group">
+        <label>Training</label>
+        <input type="time" name="discord_default_time_training" class="form-control"
+               value="<?= h(getSetting('discord_default_time_training','')) ?>"/>
+      </div>
+      <div class="form-group">
+        <label>Briefing</label>
+        <input type="time" name="discord_default_time_briefing" class="form-control"
+               value="<?= h(getSetting('discord_default_time_briefing','')) ?>"/>
+      </div>
+      <div class="form-group">
+        <label>Rennstart</label>
+        <input type="time" name="discord_default_time_race" class="form-control"
+               value="<?= h(getSetting('discord_default_time_race','')) ?>"/>
       </div>
     </div>
     <button type="submit" class="btn btn-primary">💾 Speichern & config.json schreiben</button>

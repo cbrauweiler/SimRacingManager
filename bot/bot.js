@@ -92,10 +92,17 @@ function buildEventMessage(data, lists) {
     const noStr    = declined.length ? declined.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Absagen*';
     const maybeStr = maybe.length    ? maybe.map(n=>`👤 ${n}`).join('\n')    : '*Noch keine Rückmeldung*';
 
+    // Beschreibung: Datum + optionale Extra-Info
+    const descParts = [`**${data.season_name}** · ${formatDate(data.race_date)}`];
+    if (data.extra_info && data.extra_info.trim()) {
+        descParts.push('');
+        descParts.push(data.extra_info.trim());
+    }
+
     const embed = new EmbedBuilder()
         .setColor(0xe8333a)
         .setTitle(`🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}`)
-        .setDescription(`**${data.season_name}** · ${formatDate(data.race_date)}`)
+        .setDescription(descParts.join('\n'))
         .addFields(
             { name: '⏰ Zeitplan', value: zeitplan || '–', inline: false },
             ...(wxTrain ? [{ name: '🌤️ Wetter Training',  value: wxTrain, inline: false }] : []),

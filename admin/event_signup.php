@@ -81,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $wxQuali    = array_map(fn($i) => $_POST["wx_quali_{$i}"]    ?? 'Clear', range(1,5));
         $wxRace     = array_map(fn($i) => $_POST["wx_race_{$i}"]     ?? 'Clear', range(1,5));
         $deadlineHrs  = (int)($_POST['deadline_hours'] ?? 2);
-        $mentionRole  = trim($_POST['mention_role'] ?? '');
+        $mentionRole  = trim($_POST['mention_role']  ?? '');
+        $extraInfo    = trim($_POST['extra_info']    ?? '');
 
         $race = $db->prepare("SELECT rc.*,s.name AS season_name,s.year FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE rc.id=?");
         $race->execute([$raceId]); $race=$race->fetch();
@@ -269,20 +270,31 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
           <div class="form-hint">Rollen-ID (Rechtsklick auf Rolle → ID kopieren). Leer = keine Markierung.</div>
         </div>
 
+        <div class="form-group">
+          <label>📝 Zusätzliche Informationen <span class="text-muted" style="font-weight:400;font-size:.75rem">(optional, Discord-Formatierung erlaubt)</span></label>
+          <textarea name="extra_info" class="form-control" rows="3"
+                    placeholder="z.B. **Pflichtlektüre:** Regelwerk beachten! ⚠️ Reifenstrategie: Mindestens 1 Pflichtboxenstopp."
+                    style="font-family:monospace;font-size:.85rem;resize:vertical"></textarea>
+          <div class="form-hint">Erscheint vor dem Zeitplan im Discord-Post. Unterstützt **fett**, *kursiv*, __unterstrichen__, \`code\`, > Zitat</div>
+        </div>
+
         <div class="divider"></div>
         <div class="form-group"><label style="font-weight:700;color:var(--text)">⏰ Zeitplan</label></div>
         <div class="form-row cols-3">
           <div class="form-group">
             <label>Training</label>
-            <input type="time" name="time_training" class="form-control" placeholder="19:00"/>
+            <input type="time" name="time_training" class="form-control"
+                   value="<?= h(getSetting('discord_default_time_training','')) ?>"/>
           </div>
           <div class="form-group">
             <label>Briefing</label>
-            <input type="time" name="time_briefing" class="form-control" placeholder="19:30"/>
+            <input type="time" name="time_briefing" class="form-control"
+                   value="<?= h(getSetting('discord_default_time_briefing','')) ?>"/>
           </div>
           <div class="form-group">
             <label>Rennstart</label>
-            <input type="time" name="time_race" class="form-control" placeholder="20:00"/>
+            <input type="time" name="time_race" class="form-control"
+                   value="<?= h(getSetting('discord_default_time_race','')) ?>"/>
           </div>
         </div>
 
