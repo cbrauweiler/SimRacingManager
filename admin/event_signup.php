@@ -19,6 +19,8 @@ define('WEATHER_OPTIONS', [
     'OvercastHeavyRain'   => ['emoji'=>'💧',  'label'=>'Starkregen (Overcast & Heavy Rain)'],
     'OvercastStorm'       => ['emoji'=>'⛈️',  'label'=>'Gewitter (Overcast & Storm)'],
     'Night'               => ['emoji'=>'🌙',  'label'=>'Nacht (Night)'],
+    'Random'              => ['emoji'=>'🎲',  'label'=>'Zufall (Random)'],
+    ''                    => ['emoji'=>'',    'label'=>'– nicht angegeben –'],
 ]);
 
 // Bot-HTTP-Request via fsockopen (funktioniert auch ohne allow_url_fopen)
@@ -299,7 +301,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
               <div class="text-muted" style="font-size:.7rem;margin-bottom:3px;text-align:center">Slot <?= $s ?></div>
               <select name="<?= $wx['prefix'] ?>_<?= $s ?>" class="form-control" style="padding:5px 6px;font-size:.82rem">
                 <?php foreach ($wo as $key => $opt): ?>
-                <option value="<?= $key ?>"><?= $opt['emoji'] ?> <?= h($opt['label']) ?></option>
+                <option value="<?= $key ?>" <?= $key===''?'selected':'' ?>><?= $opt['emoji'] ? $opt['emoji'].' ' : '' ?><?= h($opt['label']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
