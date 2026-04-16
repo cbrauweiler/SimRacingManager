@@ -46,6 +46,15 @@ if ($sid) {
     unset($t); // Referenz aufloesen! Sonst wird das vorletzte Team doppelt angezeigt
 }
 
+// Ratings laden
+$showRatings = getSetting('rating_show_public','1') === '1';
+$ratingsMap  = [];
+if ($showRatings && isset($activeSeason['id'])) {
+    $rStmt = $db->prepare("SELECT * FROM driver_ratings WHERE season_id=?");
+    $rStmt->execute([$activeSeason['id']]);
+    foreach ($rStmt->fetchAll() as $r) $ratingsMap[$r['driver_id']] = $r;
+}
+
 $pageTitle = 'Teams & Fahrer – ' . getSetting('league_name');
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -88,6 +97,10 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?><?= h(mb_substr($d['name'],0,2)) ?><?php endif; ?>
               </div>
               <span><?= h($d['name']) ?></span>
+              <?php if ($showRatings && isset($ratingsMap[$d['driver_id']])): ?>
+              <?php $dr=$ratingsMap[$d['driver_id']]; $ov=(float)$dr['overall']; ?>
+              <span style="margin-left:6px;padding:1px 6px;border-radius:10px;font-family:var(--font-display);font-weight:900;font-size:.7rem;background:rgba(0,0,0,.3);color:<?= ratingBadgeColor($ov) ?>;border:1px solid <?= ratingBadgeColor($ov) ?>44"><?= number_format($ov,1) ?></span>
+              <?php endif; ?>
             </a>
             <?php if($d['wins'] > 0): ?>
               <span class="badge badge-secondary" style="font-size:.6rem">🥇 <?= (int)$d['wins'] ?>x</span>
@@ -127,4 +140,13 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card"><div class="card-body text-muted">Noch keine Teams in der aktiven Saison.</div></div>
   <?php endif; ?>
 </div>
+<?php
+function ratingBadgeColor(float $v): string {
+    if ($v >= 8.5) return '#4cffb0';
+    if ($v >= 7.0) return '#a0f080';
+    if ($v >= 5.5) return '#f5a623';
+    if ($v >= 4.0) return '#ff9040';
+    return '#ff6060';
+}
+?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

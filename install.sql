@@ -331,3 +331,29 @@ CREATE INDEX IF NOT EXISTS idx_entries_driver        ON `result_entries`(`driver
 CREATE INDEX IF NOT EXISTS idx_entries_team          ON `result_entries`(`team_id`);
 CREATE INDEX IF NOT EXISTS idx_races_season          ON `races`(`season_id`);
 CREATE INDEX IF NOT EXISTS idx_teams_season          ON `teams`(`season_id`);
+
+-- -------------------------------------------------------
+-- Fahrer-Ratings (automatisch berechnet, pro Saison)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `driver_ratings` (
+  `id`          INT AUTO_INCREMENT PRIMARY KEY,
+  `driver_id`   INT NOT NULL,
+  `season_id`   INT NOT NULL,
+  `racecraft`   DECIMAL(3,1) NOT NULL DEFAULT 0,
+  `pace`        DECIMAL(3,1) NOT NULL DEFAULT 0,
+  `consistency` DECIMAL(3,1) NOT NULL DEFAULT 0,
+  `experience`  DECIMAL(3,1) NOT NULL DEFAULT 0,
+  `overall`     DECIMAL(3,1) NOT NULL DEFAULT 0,
+  `starts`      SMALLINT    NOT NULL DEFAULT 0,
+  `calculated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_driver_season` (`driver_id`, `season_id`),
+  FOREIGN KEY (`driver_id`) REFERENCES `drivers`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`season_id`) REFERENCES `seasons`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Rating-Einstellungen
+INSERT INTO `settings` (`key`, `value`) VALUES
+('rating_min_starts',      '2'),
+('rating_full_starts',     '4'),
+('rating_show_public',     '1')
+ON DUPLICATE KEY UPDATE `value` = `value`;
