@@ -44,6 +44,7 @@ const WEATHER_EMOJIS = {
     OvercastHeavyRain: '💧',
     OvercastStorm:     '⛈️',
     Night:             '🌙',
+    Random:            '🎲',
 };
 
 // ============================================================
@@ -77,9 +78,11 @@ function buildEventMessage(data, lists) {
 
     // Wetter
     // wx_* sind Arrays mit 5 Slots → Emojis zusammensetzen
-    const wxSlots = (arr) => Array.isArray(arr)
-        ? arr.map(s => s.emoji || WEATHER_EMOJIS[s.key] || '❓').join(' ')
-        : (arr?.emoji || '☀️');
+    const wxSlots = (arr) => {
+        if (!Array.isArray(arr)) return arr?.emoji || '';
+        const filled = arr.filter(s => s.key !== '' && s.key != null);
+        return filled.map(s => s.emoji || WEATHER_EMOJIS[s.key] || '❓').join(' ');
+    };
     const wxTrain = wxSlots(data.wx_training);
     const wxQuali = wxSlots(data.wx_quali);
     const wxRace  = wxSlots(data.wx_race);
@@ -95,9 +98,9 @@ function buildEventMessage(data, lists) {
         .setDescription(`**${data.season_name}** · ${formatDate(data.race_date)}`)
         .addFields(
             { name: '⏰ Zeitplan', value: zeitplan || '–', inline: false },
-            { name: '🌤️ Wetter Training',    value: wxTrain, inline: false },
-            { name: '🌤️ Wetter Qualifying',   value: wxQuali, inline: false },
-            { name: '🌤️ Wetter Rennen',        value: wxRace,  inline: false },
+            ...(wxTrain ? [{ name: '🌤️ Wetter Training',  value: wxTrain, inline: false }] : []),
+            ...(wxQuali ? [{ name: '🌤️ Wetter Qualifying', value: wxQuali, inline: false }] : []),
+            ...(wxRace  ? [{ name: '🌤️ Wetter Rennen',     value: wxRace,  inline: false }] : []),
             { name: `✅ Zusagen (${accepted.length})`, value: yesStr,   inline: false },
             { name: `❌ Absagen (${declined.length})`, value: noStr,    inline: false },
             { name: `❓ Vielleicht (${maybe.length})`, value: maybeStr, inline: false },
