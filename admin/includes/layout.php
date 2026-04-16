@@ -59,6 +59,7 @@ $isSuperAdmin  = hasRole('superadmin');
   <div class="admin-menu-group">Teilnehmer</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/teams.php" class="admin-menu-item <?= $ap==='teams'?'active':'' ?>"><span class="menu-icon">🚗</span><span>Teams</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Fahrer (Global)</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/ratings.php" class="admin-menu-item <?= $ap==='ratings'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Fahrer (Global)</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/lineup.php" class="admin-menu-item <?= $ap==='lineup'?'active':'' ?>"><span class="menu-icon">📋</span><span>Saison-Lineup</span></a><?php endif; ?>
   <div class="admin-menu-group">Rennen</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/results.php" class="admin-menu-item <?= $ap==='results'?'active':'' ?>"><span class="menu-icon">🏁</span><span>Race Results</span></a><?php endif; ?>
