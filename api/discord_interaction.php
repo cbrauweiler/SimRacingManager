@@ -104,13 +104,34 @@ if ($action === 'check_deadlines') {
 if ($action === 'get_open_events') {
     $events = $db->query("
         SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time,
-               s.name AS season_name
+               rc.location, s.name AS season_name
         FROM discord_events de
         JOIN races rc ON rc.id = de.race_id
         JOIN seasons s ON s.id = rc.season_id
         WHERE de.is_closed = 0 AND de.message_id IS NOT NULL
     ")->fetchAll();
-    echo json_encode(['events' => $events]);
+
+    $result = [];
+    foreach ($events as $ev) {
+        // Gespeicherten Payload verwenden falls vorhanden
+        $payload = $ev['event_payload'] ? json_decode($ev['event_payload'], true) : [];
+
+        // Fehlende Felder aus DB-Daten ergänzen
+        $payload['event_id']   = $ev['id'];
+        $payload['message_id'] = $ev['message_id'];
+        $payload['channel_id'] = $ev['channel_id'];
+        $payload['thread_id']  = $ev['thread_id'];
+        $payload['deadline']   = $ev['deadline'];
+        // Fallback-Felder falls kein Payload gespeichert
+        if (empty($payload['track_name']))  $payload['track_name']  = $ev['track_name'];
+        if (empty($payload['round']))       $payload['round']       = $ev['round'];
+        if (empty($payload['race_date']))   $payload['race_date']   = $ev['race_date'];
+        if (empty($payload['season_name'])) $payload['season_name'] = $ev['season_name'];
+        if (empty($payload['location']))    $payload['location']    = $ev['location'] ?? '';
+
+        $result[] = $payload;
+    }
+    echo json_encode(['events' => $result]);
     exit;
 }
 

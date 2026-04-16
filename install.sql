@@ -357,3 +357,7 @@ INSERT INTO `settings` (`key`, `value`) VALUES
 ('rating_full_starts',     '4'),
 ('rating_show_public',     '1')
 ON DUPLICATE KEY UPDATE `value` = `value`;
+
+-- Migration: Event-Payload persistieren
+ALTER TABLE `discord_events`
+  ADD COLUMN IF NOT EXISTS `event_payload` MEDIUMTEXT NULL DEFAULT NULL;

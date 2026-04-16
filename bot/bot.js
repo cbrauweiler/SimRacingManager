@@ -166,11 +166,12 @@ client.once('ready', async () => {
             if (res.data?.events) {
                 for (const ev of res.data.events) {
                     if (ev.message_id) {
-                        openEvents.set(ev.id, {
+                        openEvents.set(ev.event_id || ev.id, {
                             messageId: ev.message_id,
                             channelId: ev.channel_id,
                             threadId:  ev.thread_id,
                             deadline:  ev.deadline,
+                            eventData: ev,  // vollständiger Payload inkl. Zeiten, Wetter etc.
                         });
                     }
                 }

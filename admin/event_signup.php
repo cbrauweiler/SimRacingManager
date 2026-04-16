@@ -93,8 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $deadline = date('Y-m-d H:i:s', strtotime($raceDateTime) - ($deadlineHrs * 3600));
 
         // Event in DB speichern
-        $db->prepare("INSERT INTO discord_events (race_id,channel_id,deadline,created_by) VALUES (?,?,?,?)")
-           ->execute([$raceId, $botChannel, $deadline, currentUser()['id']]);
+        $payloadJson = json_encode($payload ?? []);
+        $db->prepare("INSERT INTO discord_events (race_id,channel_id,deadline,created_by,event_payload) VALUES (?,?,?,?,?)")
+           ->execute([$raceId, $botChannel, $deadline, currentUser()['id'], '{}']);
         $eventId = (int)$db->lastInsertId();
 
         // Payload für Bot zusammenbauen
