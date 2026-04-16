@@ -119,6 +119,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'channel_id'    => $botChannel,
             'callback_url'  => SITE_URL . '/api/discord_interaction.php',
             'bot_secret'    => substr(hash('sha256', $botToken), 0, 32),
+            'mention_role'  => $mentionRole,
+            'extra_info'    => $extraInfo,
         ];
 
         // HTTP-Request an Bot
@@ -292,7 +294,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
                    value="<?= h(getSetting('discord_default_time_briefing','')) ?>"/>
           </div>
           <div class="form-group">
-            <label>Rennstart</label>
+            <label>Event-Start</label>
             <input type="time" name="time_race" class="form-control"
                    value="<?= h(getSetting('discord_default_time_race','')) ?>"/>
           </div>
@@ -306,12 +308,24 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
             ['prefix'=>'wx_race',     'label'=>'🏁 Rennen'],
         ] as $wx): ?>
         <div class="form-group">
-          <label><?= $wx['label'] ?></label>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label style="margin:0"><?= $wx['label'] ?></label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <select class="form-control form-control-sm" id="sync-<?= $wx['prefix'] ?>" style="font-size:.78rem;padding:3px 6px;width:auto">
+                <?php foreach ($wo as $key => $opt): ?>
+                <option value="<?= $key ?>"><?= $opt['emoji'] ? $opt['emoji'].' ' : '' ?><?= h($opt['label']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      style="font-size:.75rem;padding:3px 8px;white-space:nowrap"
+                      onclick="syncWeather('<?= $wx['prefix'] ?>')">Alle gleich</button>
+            </div>
+          </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <?php for ($s=1; $s<=5; $s++): ?>
             <div style="flex:1;min-width:100px">
               <div class="text-muted" style="font-size:.7rem;margin-bottom:3px;text-align:center">Slot <?= $s ?></div>
-              <select name="<?= $wx['prefix'] ?>_<?= $s ?>" class="form-control" style="padding:5px 6px;font-size:.82rem">
+              <select name="<?= $wx['prefix'] ?>_<?= $s ?>" id="<?= $wx['prefix'] ?>_<?= $s ?>" class="form-control" style="padding:5px 6px;font-size:.82rem">
                 <?php foreach ($wo as $key => $opt): ?>
                 <option value="<?= $key ?>" <?= $key===''?'selected':'' ?>><?= $opt['emoji'] ? $opt['emoji'].' ' : '' ?><?= h($opt['label']) ?></option>
                 <?php endforeach; ?>
@@ -408,4 +422,13 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
   </div>
 
 </div>
+<script>
+function syncWeather(prefix) {
+    var val = document.getElementById('sync-' + prefix).value;
+    for (var i = 1; i <= 5; i++) {
+        var sel = document.getElementById(prefix + '_' + i);
+        if (sel) sel.value = val;
+    }
+}
+</script>
 <?php require_once __DIR__ . '/includes/layout_end.php'; ?>

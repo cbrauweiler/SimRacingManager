@@ -74,7 +74,7 @@ function buildEventMessage(data, lists) {
     let zeitplan = '';
     if (data.time_training) zeitplan += `\`${data.time_training}\` Training\n`;
     if (data.time_briefing) zeitplan += `\`${data.time_briefing}\` Briefing\n`;
-    if (data.time_race)     zeitplan += `\`${data.time_race}\` Rennen\n`;
+    if (data.time_race)     zeitplan += `\`${data.time_race}\` Start\n`;
 
     // Wetter
     // wx_* sind Arrays mit 5 Slots → Emojis zusammensetzen
