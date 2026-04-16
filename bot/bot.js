@@ -179,7 +179,7 @@ client.once('ready', async () => {
                             deadline:  ev.deadline,
                             eventData: ev,
                         });
-                        console.log(`  → Event ${ev.event_id}: R${ev.round} ${ev.track_name}, training: ${ev.time_training||'–'}, wx: ${JSON.stringify(ev.wx_training?.slice?.(0,1))}`);
+                        console.log(`  → Event ${ev.event_id}: R${ev.round} ${ev.track_name}, training: ${ev.time_training||'–'}, wx_training type: ${typeof ev.wx_training}, isArray: ${Array.isArray(ev.wx_training)}, raw: ${JSON.stringify(ev.wx_training)?.slice(0,80)}`);
                     }
                 }
                 console.log(`📋 ${openEvents.size} offene Event(s) wiederhergestellt`);
