@@ -166,13 +166,20 @@ client.once('ready', async () => {
             if (res.data?.events) {
                 for (const ev of res.data.events) {
                     if (ev.message_id) {
-                        openEvents.set(ev.event_id || ev.id, {
-                            messageId: ev.message_id,
-                            channelId: ev.channel_id,
-                            threadId:  ev.thread_id,
-                            deadline:  ev.deadline,
-                            eventData: ev,  // vollständiger Payload inkl. Zeiten, Wetter etc.
+                        // wx_* sicherstellen dass es Arrays sind
+                        ['wx_training','wx_quali','wx_race'].forEach(key => {
+                            if (ev[key] && !Array.isArray(ev[key])) {
+                                ev[key] = Object.values(ev[key]);
+                            }
                         });
+                        openEvents.set(ev.event_id || ev.id, {
+                            messageId: String(ev.message_id),
+                            channelId: String(ev.channel_id),
+                            threadId:  ev.thread_id ? String(ev.thread_id) : null,
+                            deadline:  ev.deadline,
+                            eventData: ev,
+                        });
+                        console.log(`  → Event ${ev.event_id}: R${ev.round} ${ev.track_name}, training: ${ev.time_training||'–'}, wx: ${JSON.stringify(ev.wx_training?.slice?.(0,1))}`);
                     }
                 }
                 console.log(`📋 ${openEvents.size} offene Event(s) wiederhergestellt`);

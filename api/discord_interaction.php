@@ -116,6 +116,13 @@ if ($action === 'get_open_events') {
         // Gespeicherten Payload verwenden falls vorhanden
         $payload = $ev['event_payload'] ? json_decode($ev['event_payload'], true) : [];
 
+        // wx_* sicherstellen dass es Arrays sind (nicht Objekte)
+        foreach (['wx_training','wx_quali','wx_race'] as $wxKey) {
+            if (!empty($payload[$wxKey]) && !array_is_list($payload[$wxKey])) {
+                $payload[$wxKey] = array_values($payload[$wxKey]);
+            }
+        }
+
         // Fehlende Felder aus DB-Daten ergänzen
         $payload['event_id']   = $ev['id'];
         $payload['message_id'] = $ev['message_id'];
