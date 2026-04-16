@@ -355,7 +355,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
     <div class="card-header"><h3>📊 Bisherige Anmeldungen</h3></div>
     <div class="card-body" style="padding:0;max-height:600px;overflow-y:auto">
       <?php if ($events): foreach ($events as $ev): ?>
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);border-left:4px solid <?= $ev['is_closed'] ? 'var(--primary)' : '#4cffb0' ?>;transition:border-color .3s">
         <div class="flex justify-between align-center gap-2 mb-1" style="flex-wrap:wrap">
           <div>
             <strong>R<?= (int)$ev['round'] ?> · <?= h($ev['track_name']) ?></strong>

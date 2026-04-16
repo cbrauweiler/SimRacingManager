@@ -146,7 +146,10 @@ function buildButtons(closed = false) {
 // ============================================================
 // Discord Client
 // ============================================================
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+] });
 const openEvents = new Map(); // eventId → { messageId, channelId, threadId, data }
 
 client.once('ready', async () => {
@@ -208,13 +211,20 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.deferUpdate();
 
+    // Server-Nickname ermitteln (displayName = Nickname falls gesetzt, sonst Username)
+    let displayName = interaction.user.username;
+    try {
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        displayName = member.displayName;
+    } catch(e) { /* Fallback auf username */ }
+
     // An PHP-Backend melden
     try {
         const res = await axios.post(config.callback_url, {
             action:           'signup',
             event_id:         eventId,
             discord_user_id:  interaction.user.id,
-            discord_username: interaction.user.username,
+            discord_username: displayName,
             status:           status,
             bot_secret:       config.bot_secret,
         }, { timeout: 8000, headers: { 'X-Bot-Secret': config.bot_secret } });
