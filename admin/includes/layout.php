@@ -46,33 +46,33 @@ $isSuperAdmin  = hasRole('superadmin');
 <aside class="admin-sidebar">
   <div class="admin-menu-group">Liga</div>
   <a href="<?= SITE_URL ?>/admin/index.php" class="admin-menu-item <?= $ap==='dashboard'?'active':'' ?>"><span class="menu-icon">📊</span><span>Dashboard</span></a>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/settings.php" class="admin-menu-item <?= $ap==='settings'?'active':'' ?>"><span class="menu-icon">⚙️</span><span>Liga Einstellungen</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/settings.php" class="admin-menu-item <?= $ap==='settings'?'active':'' ?>"><span class="menu-icon">⚙️</span><span>League Settings</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/design.php" class="admin-menu-item <?= $ap==='design'?'active':'' ?>"><span class="menu-icon">🎨</span><span>Design</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/navigation.php" class="admin-menu-item <?= $ap==='navigation'?'active':'' ?>"><span class="menu-icon">🔗</span><span>Navigation</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/info.php" class="admin-menu-item <?= $ap==='info'?'active':'' ?>"><span class="menu-icon">ℹ️</span><span>Liga Info</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/info.php" class="admin-menu-item <?= $ap==='info'?'active':'' ?>"><span class="menu-icon">ℹ️</span><span>League Info</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/social.php" class="admin-menu-item <?= $ap==='social'?'active':'' ?>"><span class="menu-icon">🔗</span><span>Social Links</span></a><?php endif; ?>
   <div class="admin-menu-group">Inhalte</div>
   <a href="<?= SITE_URL ?>/admin/news.php" class="admin-menu-item <?= $ap==='news'?'active':'' ?>"><span class="menu-icon">📰</span><span>News</span></a>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/seasons.php" class="admin-menu-item <?= $ap==='seasons'?'active':'' ?>"><span class="menu-icon">🏆</span><span>Saisons</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/calendar.php" class="admin-menu-item <?= $ap==='calendar'?'active':'' ?>"><span class="menu-icon">📅</span><span>Kalender</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/tracks.php" class="admin-menu-item <?= $ap==='tracks'?'active':'' ?>"><span class="menu-icon">🗺️</span><span>Strecken</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/seasons.php" class="admin-menu-item <?= $ap==='seasons'?'active':'' ?>"><span class="menu-icon">🏆</span><span>Seasons</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/calendar.php" class="admin-menu-item <?= $ap==='calendar'?'active':'' ?>"><span class="menu-icon">📅</span><span>Calendar</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/tracks.php" class="admin-menu-item <?= $ap==='tracks'?'active':'' ?>"><span class="menu-icon">🗺️</span><span>Tracks</span></a><?php endif; ?>
   <div class="admin-menu-group">Teilnehmer</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/teams.php" class="admin-menu-item <?= $ap==='teams'?'active':'' ?>"><span class="menu-icon">🚗</span><span>Teams</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Fahrer (Global)</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/ratings.php" class="admin-menu-item <?= $ap==='ratings'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Fahrer (Global)</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/lineup.php" class="admin-menu-item <?= $ap==='lineup'?'active':'' ?>"><span class="menu-icon">📋</span><span>Saison-Lineup</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Drivers</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/ratings.php" class="admin-menu-item <?= $ap==='ratings'?'active':'' ?>"><span class="menu-icon">⭐</span><span>Driver Ratings</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/lineup.php" class="admin-menu-item <?= $ap==='lineup'?'active':'' ?>"><span class="menu-icon">📋</span><span>Season Lineup</span></a><?php endif; ?>
   <div class="admin-menu-group">Rennen</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/results.php" class="admin-menu-item <?= $ap==='results'?'active':'' ?>"><span class="menu-icon">🏁</span><span>Race Results</span></a><?php endif; ?>
-  <?php if($qe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/qualifying.php" class="admin-menu-item <?= $ap==='qualifying'?'active':'' ?>"><span class="menu-icon">⏱️</span><span>Qualifying Results</span></a><?php endif; ?>
+  <?php if($qe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/qualifying.php" class="admin-menu-item <?= $ap==='qualifying'?'active':'' ?>"><span class="menu-icon">⏱️</span><span>Qualifying</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/import_lmu.php" class="admin-menu-item <?= $ap==='import_lmu'?'active':'' ?>"><span class="menu-icon">🏎</span><span>LMU XML Import</span></a><?php endif; ?>
   <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/import_rlt.php" class="admin-menu-item <?= $ap==='import_rlt'?'active':'' ?>"><span class="menu-icon">📊</span><span>RLT JSON Import</span></a><?php endif; ?>
-<?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/export.php" class="admin-menu-item <?= $ap==='export'?'active':'' ?>"><span class="menu-icon">🖼</span><span>Grafik Export</span></a><?php endif; ?>
-<?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/event_signup.php" class="admin-menu-item <?= $ap==='event_signup'?'active':'' ?>"><span class="menu-icon">📢</span><span>Race Anmeldung</span></a><?php endif; ?>
-  <?php if($pe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/penalties.php" class="admin-menu-item <?= $ap==='penalties'?'active':'' ?>"><span class="menu-icon">⚠️</span><span>Strafen</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/points.php" class="admin-menu-item <?= $ap==='points'?'active':'' ?>"><span class="menu-icon">🏅</span><span>Punktesystem</span></a><?php endif; ?>
+<?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/export.php" class="admin-menu-item <?= $ap==='export'?'active':'' ?>"><span class="menu-icon">🖼</span><span>Graphic Export</span></a><?php endif; ?>
+<?php if(hasRole('editor')): ?>  <a href="<?= SITE_URL ?>/admin/event_signup.php" class="admin-menu-item <?= $ap==='event_signup'?'active':'' ?>"><span class="menu-icon">📢</span><span>Race Signup</span></a><?php endif; ?>
+  <?php if($pe && hasRole('admin')): ?><a href="<?= SITE_URL ?>/admin/penalties.php" class="admin-menu-item <?= $ap==='penalties'?'active':'' ?>"><span class="menu-icon">⚠️</span><span>Penalties</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/points.php" class="admin-menu-item <?= $ap==='points'?'active':'' ?>"><span class="menu-icon">🏅</span><span>Points System</span></a><?php endif; ?>
   <div class="admin-menu-group">System</div>
-<?php if(hasRole('superadmin')): ?>  <a href="<?= SITE_URL ?>/admin/users.php" class="admin-menu-item <?= $ap==='users'?'active':'' ?>"><span class="menu-icon">👤</span><span>Benutzer</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/advanced.php" class="admin-menu-item <?= $ap==='advanced'?'active':'' ?>"><span class="menu-icon">🔧</span><span>Erweitert</span></a>
+<?php if(hasRole('superadmin')): ?>  <a href="<?= SITE_URL ?>/admin/users.php" class="admin-menu-item <?= $ap==='users'?'active':'' ?>"><span class="menu-icon">👤</span><span>Users</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/advanced.php" class="admin-menu-item <?= $ap==='advanced'?'active':'' ?>"><span class="menu-icon">🔧</span><span>Advanced</span></a>
   <?php if(hasRole('superadmin')): ?><a href="<?= SITE_URL ?>/admin/update.php" class="admin-menu-item <?= $ap==='update'?'active':'' ?>"><span class="menu-icon">⬆️</span><span>System Update</span></a><?php endif; ?><?php endif; ?>
 </aside>
 <main class="admin-content">
