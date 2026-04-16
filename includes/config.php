@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '1.4.0');
+define('APP_VERSION', '1.4.1');
 
 function getDB(): PDO {
     static $pdo = null;
@@ -372,7 +372,7 @@ function calculateRatings(PDO $db, int $seasonId): int {
             -- Racecraft: Grid vs Finish
             AVG(CASE WHEN qr.position IS NOT NULL AND re.position IS NOT NULL
                           AND re.dnf = 0 AND re.dsq = 0
-                     THEN (qr.position - re.position) END)                       AS avg_pos_gain,
+                     THEN (CAST(qr.position AS SIGNED) - CAST(re.position AS SIGNED)) END) AS avg_pos_gain,
             COUNT(CASE WHEN re.position = 1 AND re.dnf = 0 AND re.dsq = 0
                             AND qr.position != 1 THEN 1 END)                     AS wins_from_non_pole,
             COUNT(CASE WHEN re.position = 1 AND re.dnf = 0 AND re.dsq = 0
