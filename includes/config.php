@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '1.3.8');
+define('APP_VERSION', '1.4.0');
 
 function getDB(): PDO {
     static $pdo = null;
@@ -346,6 +346,184 @@ function mfaQrUrl(string $secret, string $user, string $issuer): string {
     $secret = rawurlencode($secret);
     $otpauth = "otpauth://totp/{$issuer}:{$user}?secret={$secret}&issuer={$issuer}&algorithm=SHA1&digits=6&period=30";
     return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . rawurlencode($otpauth);
+}
+
+
+// ============================================================
+// Fahrer-Rating Berechnung (RPCE – automatisch aus Ergebnissen)
+// ============================================================
+
+/**
+ * Berechnet die Ratings aller Fahrer einer Saison und speichert sie in driver_ratings.
+ * Kann jederzeit neu aufgerufen werden (UPSERT).
+ */
+function calculateRatings(PDO $db, int $seasonId): int {
+    $minStarts  = (int)getSetting('rating_min_starts',  '2');
+
+    // Alle Fahrer der Saison mit ihren Statistiken laden
+    $stmt = $db->prepare("
+        SELECT
+            se.driver_id,
+            COUNT(DISTINCT re.result_id)                                        AS starts,
+            -- Pace: Qualifying-Positionen
+            AVG(CASE WHEN qr.position IS NOT NULL THEN qr.position END)         AS avg_quali_pos,
+            COUNT(CASE WHEN qr.position = 1 THEN 1 END)                         AS poles,
+            COUNT(CASE WHEN re.is_fastest_lap = 1 THEN 1 END)                   AS fastest_laps,
+            -- Racecraft: Grid vs Finish
+            AVG(CASE WHEN qr.position IS NOT NULL AND re.position IS NOT NULL
+                          AND re.dnf = 0 AND re.dsq = 0
+                     THEN (qr.position - re.position) END)                       AS avg_pos_gain,
+            COUNT(CASE WHEN re.position = 1 AND re.dnf = 0 AND re.dsq = 0
+                            AND qr.position != 1 THEN 1 END)                     AS wins_from_non_pole,
+            COUNT(CASE WHEN re.position = 1 AND re.dnf = 0 AND re.dsq = 0
+                       THEN 1 END)                                               AS wins,
+            COUNT(CASE WHEN re.position <= 3 AND re.dnf = 0 AND re.dsq = 0
+                       THEN 1 END)                                               AS podiums,
+            -- Consistency: DNF/DSQ/Penalties
+            COUNT(CASE WHEN re.dnf = 1 THEN 1 END)                              AS dnfs,
+            COUNT(CASE WHEN re.dsq = 1 THEN 1 END)                              AS dsqs,
+            COUNT(CASE WHEN p.id IS NOT NULL AND p.applied = 1 THEN 1 END)      AS penalties
+        FROM season_entries se
+        LEFT JOIN result_entries re ON re.driver_id = se.driver_id
+            AND re.result_id IN (
+                SELECT r.id FROM results r
+                JOIN races rc ON rc.id = r.race_id AND rc.season_id = :sid
+            )
+        LEFT JOIN qualifying_results qr ON qr.driver_id = se.driver_id
+            AND qr.race_id IN (SELECT id FROM races WHERE season_id = :sid2)
+        LEFT JOIN penalties p ON p.driver_id = se.driver_id
+            AND p.result_id IN (
+                SELECT re2.result_id FROM result_entries re2
+                JOIN results r2 ON r2.id = re2.result_id
+                JOIN races rc2 ON rc2.id = r2.race_id AND rc2.season_id = :sid3
+            )
+        WHERE se.season_id = :sid4 AND se.is_reserve = 0
+        GROUP BY se.driver_id
+        HAVING starts >= :min_starts
+    ");
+    $stmt->execute([
+        ':sid'        => $seasonId,
+        ':sid2'       => $seasonId,
+        ':sid3'       => $seasonId,
+        ':sid4'       => $seasonId,
+        ':min_starts' => $minStarts,
+    ]);
+    $rows = $stmt->fetchAll();
+
+    if (empty($rows)) return 0;
+
+    // Maximale Starts über alle Saisons für Experience
+    $allStarts = $db->prepare("
+        SELECT se.driver_id, COUNT(DISTINCT re.result_id) AS total_starts
+        FROM season_entries se
+        LEFT JOIN result_entries re ON re.driver_id = se.driver_id
+        GROUP BY se.driver_id
+    ");
+    $allStarts->execute();
+    $totalStartsMap = [];
+    foreach ($allStarts->fetchAll() as $r) {
+        $totalStartsMap[$r['driver_id']] = (int)$r['total_starts'];
+    }
+
+    // Anzahl Saisons je Fahrer
+    $seasonsPerDriver = $db->query("
+        SELECT driver_id, COUNT(DISTINCT season_id) AS season_count
+        FROM season_entries GROUP BY driver_id
+    ")->fetchAll();
+    $seasonCountMap = [];
+    foreach ($seasonsPerDriver as $r) $seasonCountMap[$r['driver_id']] = (int)$r['season_count'];
+
+    // Anzahl verfügbarer Rennen in dieser Saison
+    $raceCount = (int)$db->prepare("SELECT COUNT(*) FROM races WHERE season_id=?")
+                         ->execute([$seasonId]) ? $db->prepare("SELECT COUNT(*) FROM races WHERE season_id=?")->execute([$seasonId]) : 0;
+    $rcStmt = $db->prepare("SELECT COUNT(*) FROM races WHERE season_id=?");
+    $rcStmt->execute([$seasonId]);
+    $raceCount = (int)$rcStmt->fetchColumn() ?: 1;
+
+    // Normalisierungsfunktion: Wert auf 1.0–10.0 skalieren
+    $normalize = function(float $raw, float $min, float $max): float {
+        if ($max <= $min) return 5.0;
+        $clamped = max($min, min($max, $raw));
+        $scaled  = 1.0 + (($clamped - $min) / ($max - $min)) * 9.0;
+        return round($scaled, 1);
+    };
+
+    // Globale Maximalwerte für Normalisierung ermitteln
+    $maxStarts      = max(array_column($rows, 'starts'));
+    $maxSeasons     = max(array_map(fn($r) => $seasonCountMap[$r['driver_id']] ?? 1, $rows));
+    $maxTotalStarts = max(array_map(fn($r) => $totalStartsMap[$r['driver_id']] ?? 1, $rows));
+
+    $upsert = $db->prepare("
+        INSERT INTO driver_ratings (driver_id, season_id, racecraft, pace, consistency, experience, overall, starts)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            racecraft=VALUES(racecraft), pace=VALUES(pace),
+            consistency=VALUES(consistency), experience=VALUES(experience),
+            overall=VALUES(overall), starts=VALUES(starts),
+            calculated_at=NOW()
+    ");
+
+    $count = 0;
+    foreach ($rows as $d) {
+        $starts  = (int)$d['starts'];
+        $driverId = (int)$d['driver_id'];
+
+        // ── PACE ──────────────────────────────────────────────────────
+        // Niedrige Quali-Position = gut (invertiert), + FL & Pole Bonus
+        $qualiScore = 5.0;
+        if ($d['avg_quali_pos'] !== null) {
+            // Invertiert: Pos 1 = max, Pos N = min
+            $qualiScore = $normalize($raceCount + 1 - (float)$d['avg_quali_pos'], 1, $raceCount);
+        }
+        $flBonus   = min(2.0, ($d['fastest_laps'] / max(1, $starts)) * 4.0);
+        $poleBonus = min(1.5, ($d['poles']        / max(1, $starts)) * 3.0);
+        $pace      = round(min(10.0, max(1.0, ($qualiScore + $flBonus + $poleBonus))), 1);
+
+        // ── RACECRAFT ─────────────────────────────────────────────────
+        // Positionsgewinn Grid→Finish + Siege ohne Pole
+        $posGain   = (float)($d['avg_pos_gain'] ?? 0);
+        $gainScore = $normalize($posGain, -5, 10); // -5 = viel verloren, +10 = viel gewonnen
+        $winBonus  = min(2.0, ($d['wins_from_non_pole'] / max(1, $starts)) * 5.0);
+        $podBonus  = min(1.0, ($d['podiums']            / max(1, $starts)) * 2.0);
+        $racecraft = round(min(10.0, max(1.0, ($gainScore + $winBonus + $podBonus))), 1);
+
+        // ── CONSISTENCY ───────────────────────────────────────────────
+        // DNF/DSQ/Strafen-freie Rennen = gut
+        $incidents     = (int)$d['dnfs'] + ((int)$d['dsqs'] * 2) + (int)$d['penalties'];
+        $cleanRaces    = max(0, $starts - $incidents);
+        $cleanRatio    = $cleanRaces / max(1, $starts);
+        $consistency   = round(min(10.0, max(1.0, 1.0 + $cleanRatio * 9.0)), 1);
+
+        // ── EXPERIENCE ────────────────────────────────────────────────
+        // Logarithmisch skaliert: viele Starts über viele Saisons = hoch
+        $totalStarts  = $totalStartsMap[$driverId] ?? $starts;
+        $seasonCount  = $seasonCountMap[$driverId] ?? 1;
+        $expRaw       = log(max(1, $totalStarts)) / log(max(2, $maxTotalStarts)) * 7.5
+                      + ($seasonCount / max(1, $maxSeasons)) * 2.5;
+        $experience   = round(min(10.0, max(1.0, $expRaw)), 1);
+
+        // ── OVERALL ───────────────────────────────────────────────────
+        $overall = round(($racecraft + $pace + $consistency + $experience) / 4, 1);
+
+        $upsert->execute([$driverId, $seasonId, $racecraft, $pace, $consistency, $experience, $overall, $starts]);
+        $count++;
+    }
+
+    return $count;
+}
+
+/**
+ * Rating eines Fahrers für eine Saison laden.
+ * Gibt null zurück wenn zu wenig Starts.
+ */
+function getDriverRating(PDO $db, int $driverId, int $seasonId): ?array {
+    $stmt = $db->prepare("SELECT * FROM driver_ratings WHERE driver_id=? AND season_id=?");
+    $stmt->execute([$driverId, $seasonId]);
+    $row = $stmt->fetch();
+    if (!$row) return null;
+    $fullStarts = (int)getSetting('rating_full_starts', '4');
+    $row['is_provisional'] = $row['starts'] < $fullStarts;
+    return $row;
 }
 
 // Helpers
