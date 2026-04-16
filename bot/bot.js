@@ -284,8 +284,18 @@ app.post('/post-event', async (req, res) => {
 
         const embed   = buildEventMessage(data, { accepted:[], declined:[], maybe:[] });
         const buttons = buildButtons(false);
-        // Rolle markieren (als separater Content vor dem Embed)
-        const mentionContent = data.mention_role ? `<@&${data.mention_role}>` : undefined;
+        // Mention: @everyone/@here direkt, sonst als Rollen-ID
+        let mentionContent = undefined;
+        if (data.mention_role) {
+            const m = data.mention_role.trim();
+            if (m === '@everyone' || m === 'everyone') {
+                mentionContent = '@everyone';
+            } else if (m === '@here' || m === 'here') {
+                mentionContent = '@here';
+            } else if (/^\d+$/.test(m)) {
+                mentionContent = `<@&${m}>`;
+            }
+        }
         const msg = await channel.send({
             content:    mentionContent,
             embeds:     [embed],

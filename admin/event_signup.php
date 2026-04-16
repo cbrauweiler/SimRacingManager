@@ -268,8 +268,8 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
           <label>📣 Discord-Rolle markieren</label>
           <input type="text" name="mention_role" class="form-control"
                  value="<?= h(getSetting('discord_bot_mention_role','')) ?>"
-                 placeholder="z.B. 1234567890123456789"/>
-          <div class="form-hint">Rollen-ID (Rechtsklick auf Rolle → ID kopieren). Leer = keine Markierung.</div>
+                 placeholder="z.B. 1234567890123456789 oder @everyone"/>
+          <div class="form-hint">Rollen-ID, <code>@everyone</code> oder <code>@here</code>. Leer = keine Markierung.</div>
         </div>
 
         <div class="form-group">
