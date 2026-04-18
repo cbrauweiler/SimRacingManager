@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
 
 <div class="grid-2" style="gap:20px;align-items:start">
 
-  <!-- Neues Event erstellen -->
+  <!-- LINKS: Neues Event erstellen -->
   <div class="card">
     <div class="card-header"><h3>📋 Anmeldung erstellen</h3></div>
     <div class="card-body">
@@ -351,24 +351,29 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
     </div>
   </div>
 
+  <!-- RECHTS: Wettervorschau + Bisherige Anmeldungen -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
   <!-- Wettervorschau -->
-  <?php
-  $wxLat  = getSetting('weather_location_lat','');
-  $wxLon  = getSetting('weather_location_lon','');
-  $wxName = getSetting('weather_location_name','Standort');
-  ?>
-  <div class="card mb-3" id="weather-card">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <div class="card" id="weather-card">
+    <div class="card-header">
       <h3>🌤️ Wettervorschau <span class="text-muted" style="font-size:.8rem;font-weight:400">via Open-Meteo</span></h3>
     </div>
     <div class="card-body">
-      <?php if (!$wxLat || !$wxLon): ?>
-      <div class="notice notice-warning" style="font-size:.83rem">
-        Bitte zuerst unter <a href="<?= SITE_URL ?>/admin/advanced.php#bot">Erweitert → Discord Bot</a> Koordinaten eintragen.
-      </div>
-      <?php else: ?>
       <div id="wx-location-hint" class="text-muted mb-2" style="font-size:.78rem">
-        📍 Standort wird beim Rennen-Wechsel automatisch übernommen<?= getSetting('weather_location_lat','') ? ' · Standard: '.h(getSetting('weather_location_name','')).' ('.h(getSetting('weather_location_lat','')).')' : '' ?>
+        📍 Rennen wählen oder Koordinaten manuell eingeben
+      </div>
+      <div class="flex gap-2 mb-2" style="flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;flex:1;min-width:100px">
+          <label style="font-size:.75rem">Lat</label>
+          <input type="text" id="wx-lat-input" class="form-control" placeholder="z.B. 26.0325"
+                 value="<?= h(getSetting('weather_location_lat','')) ?>"/>
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:100px">
+          <label style="font-size:.75rem">Lon</label>
+          <input type="text" id="wx-lon-input" class="form-control" placeholder="z.B. 50.5106"
+                 value="<?= h(getSetting('weather_location_lon','')) ?>"/>
+        </div>
       </div>
       <div class="flex gap-2 mb-3" style="flex-wrap:wrap;align-items:flex-end">
         <div class="form-group" style="margin:0;flex:0 0 auto">
@@ -379,15 +384,14 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
                  max="<?= date('Y-m-d', strtotime('+16 days')) ?>"/>
         </div>
         <div class="form-group" style="margin:0;flex:0 0 auto">
-          <label style="font-size:.75rem">Tage anzeigen</label>
+          <label style="font-size:.75rem">Tage (max. 16)</label>
           <input type="number" id="wx-days" class="form-control" value="1" min="1" max="16" style="width:70px"/>
         </div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="loadWeather()" style="margin-bottom:1px">
-          🔍 Vorhersage laden
+          🔍 Laden
         </button>
       </div>
       <div id="wx-result" style="font-size:.83rem"></div>
-      <?php endif; ?>
     </div>
   </div>
 
@@ -462,6 +466,8 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
     </div>
   </div>
 
+  </div><!-- /RECHTS -->
+
 </div>
 <script>
 // ── Wettervorschau (Open-Meteo) ────────────────────────────
@@ -479,20 +485,22 @@ document.addEventListener('DOMContentLoaded', function() {
         var lat = opt.getAttribute('data-lat');
         var lon = opt.getAttribute('data-lon');
         var loc = opt.getAttribute('data-loc');
+        var latInp = document.getElementById('wx-lat-input');
+        var lonInp = document.getElementById('wx-lon-input');
+        var hint   = document.getElementById('wx-location-hint');
         if (lat && lon) {
             WX_LAT  = lat;
             WX_LON  = lon;
             WX_NAME = loc || opt.text;
-            // Hinweis anzeigen
-            var hint = document.getElementById('wx-location-hint');
-            if (hint) hint.textContent = '📍 Standort: ' + WX_NAME + ' (' + lat + ', ' + lon + ')';
+            if (latInp) latInp.value = lat;
+            if (lonInp) lonInp.value = lon;
+            if (hint) hint.textContent = '📍 ' + WX_NAME + ' (' + lat + ', ' + lon + ')';
         } else {
-            // Fallback auf Standard-Koordinaten aus Einstellungen
-            WX_LAT  = '<?= h(getSetting('weather_location_lat','')) ?>';
-            WX_LON  = '<?= h(getSetting('weather_location_lon','')) ?>';
-            WX_NAME = '<?= h(getSetting('weather_location_name','Standort')) ?>';
-            var hint = document.getElementById('wx-location-hint');
-            if (hint) hint.textContent = WX_LAT ? '📍 Standard: ' + WX_NAME : '⚠️ Keine Koordinaten für diese Strecke';
+            // Keine Koordinaten an der Strecke – Felder leeren damit User manuell eingibt
+            if (latInp) latInp.value = '';
+            if (lonInp) lonInp.value = '';
+            WX_LAT = ''; WX_LON = '';
+            if (hint) hint.textContent = '⚠️ Keine Koordinaten für diese Strecke hinterlegt – bitte manuell eingeben';
         }
     });
 });
@@ -526,7 +534,13 @@ var WMO_TO_KEY = {
 function loadWeather() {
     var date = document.getElementById('wx-date').value;
     var days = parseInt(document.getElementById('wx-days').value) || 1;
-    if (!date || !WX_LAT || !WX_LON) return;
+    // Manuelle Eingabefelder haben Vorrang vor JS-Variablen
+    var latInput = document.getElementById('wx-lat-input');
+    var lonInput = document.getElementById('wx-lon-input');
+    if (latInput && latInput.value.trim()) WX_LAT = latInput.value.trim();
+    if (lonInput && lonInput.value.trim()) WX_LON = lonInput.value.trim();
+    if (!date) { alert('Bitte ein Datum auswählen.'); return; }
+    if (!WX_LAT || !WX_LON) { alert('Bitte Koordinaten eingeben (Lat/Lon) oder ein Rennen mit gepflegter Strecke wählen.'); return; }
 
     // Enddatum berechnen
     var startD = new Date(date);
