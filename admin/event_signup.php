@@ -56,14 +56,16 @@ try {
     $races = $db->query("
         SELECT rc.*, s.name AS season_name, s.year,
                (SELECT id FROM discord_events WHERE race_id=rc.id AND is_closed=0 LIMIT 1) AS open_event_id,
-               (SELECT id FROM discord_events WHERE race_id=rc.id LIMIT 1) AS any_event_id
+               (SELECT id FROM discord_events WHERE race_id=rc.id LIMIT 1) AS any_event_id,
+               t.lat AS track_lat, t.lon AS track_lon, t.location AS track_location
         FROM races rc
         JOIN seasons s ON s.id=rc.season_id
+        LEFT JOIN tracks t ON t.id=rc.track_id
         WHERE s.is_active=1
         ORDER BY rc.round ASC
     ")->fetchAll();
 } catch (\PDOException $e) {
-    $races = $db->query("SELECT rc.*, s.name AS season_name, s.year, NULL AS open_event_id, NULL AS any_event_id FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE s.is_active=1 ORDER BY rc.round ASC")->fetchAll();
+    $races = $db->query("SELECT rc.*, s.name AS season_name, s.year, NULL AS open_event_id, NULL AS any_event_id, NULL AS track_lat, NULL AS track_lon, NULL AS track_location FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE s.is_active=1 ORDER BY rc.round ASC")->fetchAll();
 }
 
 // POST: Event erstellen + an Bot senden
@@ -256,7 +258,10 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
           <select name="race_id" class="form-control" required>
             <option value="">– Rennen wählen –</option>
             <?php foreach ($races as $r): ?>
-            <option value="<?= $r['id'] ?>" <?= $r['open_event_id']?'disabled':'' ?>>
+            <option value="<?= $r['id'] ?>" <?= $r['open_event_id']?'disabled':'' ?>
+                    data-lat="<?= h($r['track_lat']??'') ?>"
+                    data-lon="<?= h($r['track_lon']??'') ?>"
+                    data-loc="<?= h($r['track_location']??$r['location']??'') ?>">
               R<?= (int)$r['round'] ?> – <?= h($r['track_name']) ?>
               <?= $r['race_date'] ? ' ('.date('d.m.Y',strtotime($r['race_date'])).')' : '' ?>
               <?= $r['open_event_id'] ? ' ⚠ Bereits aktiv' : '' ?>
