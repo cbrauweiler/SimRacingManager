@@ -56,9 +56,10 @@ $isSuperAdmin  = hasRole('superadmin');
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/seasons.php" class="admin-menu-item <?= $ap==='seasons'?'active':'' ?>"><span class="menu-icon">🏆</span><span>Seasons</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/calendar.php" class="admin-menu-item <?= $ap==='calendar'?'active':'' ?>"><span class="menu-icon">📅</span><span>Calendar</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/tracks.php" class="admin-menu-item <?= $ap==='tracks'?'active':'' ?>"><span class="menu-icon">🗺️</span><span>Tracks</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/import_export.php" class="admin-menu-item <?= $ap==='import_export'?'active':'' ?>"><span class="menu-icon">📦</span><span>Import / Export</span></a><?php endif; ?>
   <div class="admin-menu-group">Teilnehmer</div>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/teams.php" class="admin-menu-item <?= $ap==='teams'?'active':'' ?>"><span class="menu-icon">🚗</span><span>Teams</span></a><?php endif; ?>
-<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Drivers</span></a><?php endif; ?>
+<?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/drivers.php" class="admin-menu-item <?= $ap==='drivers'?'active':'' ?>"><span class="menu-icon">🏎️</span><span>Drivers (Global)</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/ratings.php" class="admin-menu-item <?= $ap==='ratings'?'active':'' ?>"><span class="menu-icon">⭐</span><span>Driver Ratings</span></a><?php endif; ?>
 <?php if(hasRole('admin')): ?>  <a href="<?= SITE_URL ?>/admin/lineup.php" class="admin-menu-item <?= $ap==='lineup'?'active':'' ?>"><span class="menu-icon">📋</span><span>Season Lineup</span></a><?php endif; ?>
   <div class="admin-menu-group">Rennen</div>

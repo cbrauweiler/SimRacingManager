@@ -257,6 +257,7 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 | v1.3 | Discord Bot zur Anmeldeverwaltung von Liga-Rennen |
 | v1.4 | Fahrer Ratings (Racecraft, Pace, Consistency, Experience) |
 | v1.5 | Wetter API für die Rennanmeldung |
+| v1.6 | Import/Export Teams & Strecken |
 
 ---
 
