@@ -469,12 +469,16 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
   </div><!-- /RECHTS -->
 
 </div>
+<?php
+$jsWxLat  = addslashes(getSetting('weather_location_lat',''));
+$jsWxLon  = addslashes(getSetting('weather_location_lon',''));
+$jsWxName = addslashes(getSetting('weather_location_name','Standort'));
+?>
 <script>
 // ── Wettervorschau (Open-Meteo) ────────────────────────────
-// ── Wettervorschau (Open-Meteo) ────────────────────────────
-var WX_LAT  = '<?= h(getSetting('weather_location_lat','')) ?>';
-var WX_LON  = '<?= h(getSetting('weather_location_lon','')) ?>';
-var WX_NAME = '<?= h(getSetting('weather_location_name','Standort')) ?>';
+var WX_LAT  = '<?= $jsWxLat ?>';
+var WX_LON  = '<?= $jsWxLon ?>';
+var WX_NAME = '<?= $jsWxName ?>';
 
 // Beim Rennen-Wechsel: Koordinaten aus Strecke übernehmen falls vorhanden
 document.addEventListener('DOMContentLoaded', function() {
