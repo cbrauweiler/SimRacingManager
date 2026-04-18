@@ -1,0 +1,25 @@
+﻿name;location;country;length_km;corners;lap_record;lap_record_driver;lap_record_year;lat;lon;description
+"Algarve International Circuit";Portimao;Portugal;4.653;15;1:18.750;"Lewis Hamilton";2020;37.231378;-8.630084;
+"Autodromo Enzo e dino Ferrari";Imola;Italien;4.909;17;1:14.670;"Oscar Piastri";2025;44.344329;11.717918;
+"Autodromo Jose Carlos Pace";"Sao Paulo";Brasilien;4.309;15;1:10.540;"Valtterie Bottas";2018;-23.704676;-46.699265;
+"Autodromo Nazionale Monza";Monza;Italien;5.793;11;1:20.901;"Lando Norris";2025;45.617557;9.281464;
+"Autodromo Nazionale Monza (Curva Grande)";Monza;Italien;5.793;11;1:20.901;"Lando Norris";2025;45.617557;9.281464;
+"Bahrain International Circuit";Sakhir;Bahrain;5.412;15;1:30.252;"Michael Schumacher";2004;26.031949;50.510796;
+"Bahrain International Circuit (Endurance)";Sakhir;Bahrain;6.299;24;1:58.287;"Fernando Alonso";2010;26.031949;50.510796;
+"Bahrain International Circuit (Outer)";Sakhir;Bahrain;3.543;11;0:55.404;"George Russel";2020;26.031949;50.510796;
+"Bahrain International Circuit (Paddock)";Sakhir;Bahrain;3.823;10;1:58.287;"Fernando Alonso";2010;26.031949;50.510796;
+"Circuit de Barcelona-Catalunya";Barcelona;Spanien;4.657;14;1:15.743;"Oscar Piastri";2025;41.570185;2.261090;
+"Circuit de la Sarthe";"Le Mans";Frankreich;13.626;38;3:14.791;"Kamui Kobayashi";2017;47.951488;0.207914;
+"Circuit de la Sarthe (Mulsanne)";"Le Mans";Frankreich;;;;;;47.951488;0.207914;
+"Circuit de Spa-Francorchamps";Stavelot;Belgien;7.004;20;1:44.701;"Sergio Perez";2024;50.444188;5.965496;
+"Circuit de Spa-Francorchamps (Endurance)";Stavelo;Belgien;7.004;20;1:44.701;"Sergio Perez";2024;50.444188;5.965496;
+"Circuit of the Americas";Austin;USA;5.516;20;1:36.169;"Charles Leclerc";2019;30.132850;-97.640668;
+"Circuit of the Americas (National)";Austin;USA;;;;;;30.132850;-97.640668;
+"Circuit Paul Ricard";"Le Castellet";Frankreich;5.842;15;1:32.740;"Sebastian Vettel";2019;43.251417;5.793273;
+"Fuji Speedway";Fuji;Japan;4.563;16;1:18.426;"Felipe Massa";2008;35.372659;138.928555;
+"Fuji Speedway (Classic)";Fuji;Japan;4.479;14;;;;35.372659;138.928555;
+"Lusail International Circuit";Doha;Qatar;5.380;16;1:50.499;"Marc Márquez";2025;25.488470;51.450430;
+"Lusail International Circuit (Short)";Doha;Qatar;3.701;11;;;;25.488470;51.450430;
+"Sebring International Raceway";Sebring;USA;5.954;17;;;;27.449893;-81.353567;
+"Sebring International Raceway (School)";Sebring;USA;3.219;7;;;;27.449893;-81.353567;
+"Silverstone Circuit";Northamptonshire;England;5.891;18;1:27.097;"Max Verstappen";2020;52.069350;-1.021502;
