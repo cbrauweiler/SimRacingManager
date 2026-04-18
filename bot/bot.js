@@ -356,8 +356,7 @@ client.on('messageCreate', async message => {
             const time = r.race_time ? r.race_time.slice(0,5)+' Uhr' : '';
             const done = r.race_date && new Date(r.race_date) < new Date() ? '~~' : '';
             return `${done}R${r.round} · **${r.track_name}** · ${date}${time?' · '+time:''}${done}`;
-        }).join('
-');
+        }).join('\n');
         const embed = new EmbedBuilder()
             .setColor(0xe8333a)
             .setTitle(`📅 Kalender – ${data.season.name}`)
@@ -374,8 +373,7 @@ client.on('messageCreate', async message => {
         const medals = ['🥇','🥈','🥉'];
         const top3str = data.top3.map(d =>
             `${medals[d.position-1]} **${d.driver_name}**${d.team_name?' · '+d.team_name:''}${d.is_fastest_lap?' ⚡':''}`
-        ).join('
-');
+        ).join('\n');
         const date = data.result.race_date ? new Date(data.result.race_date).toLocaleDateString('de-DE') : '–';
         const url  = `${config.site_url}/results.php?id=${data.result.result_id}`;
         const embed = new EmbedBuilder()
