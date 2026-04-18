@@ -361,3 +361,8 @@ ON DUPLICATE KEY UPDATE `value` = `value`;
 -- Migration: Event-Payload persistieren
 ALTER TABLE `discord_events`
   ADD COLUMN IF NOT EXISTS `event_payload` MEDIUMTEXT NULL DEFAULT NULL;
+
+-- Migration: Koordinaten für Strecken
+ALTER TABLE `tracks`
+  ADD COLUMN IF NOT EXISTS `lat` DECIMAL(9,6) NULL DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS `lon` DECIMAL(9,6) NULL DEFAULT NULL;

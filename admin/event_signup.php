@@ -351,6 +351,46 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
     </div>
   </div>
 
+  <!-- Wettervorschau -->
+  <?php
+  $wxLat  = getSetting('weather_location_lat','');
+  $wxLon  = getSetting('weather_location_lon','');
+  $wxName = getSetting('weather_location_name','Standort');
+  ?>
+  <div class="card mb-3" id="weather-card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h3>🌤️ Wettervorschau <span class="text-muted" style="font-size:.8rem;font-weight:400">via Open-Meteo</span></h3>
+    </div>
+    <div class="card-body">
+      <?php if (!$wxLat || !$wxLon): ?>
+      <div class="notice notice-warning" style="font-size:.83rem">
+        Bitte zuerst unter <a href="<?= SITE_URL ?>/admin/advanced.php#bot">Erweitert → Discord Bot</a> Koordinaten eintragen.
+      </div>
+      <?php else: ?>
+      <div id="wx-location-hint" class="text-muted mb-2" style="font-size:.78rem">
+        📍 Standort wird beim Rennen-Wechsel automatisch übernommen<?= getSetting('weather_location_lat','') ? ' · Standard: '.h(getSetting('weather_location_name','')).' ('.h(getSetting('weather_location_lat','')).')' : '' ?>
+      </div>
+      <div class="flex gap-2 mb-3" style="flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;flex:0 0 auto">
+          <label style="font-size:.75rem">Datum</label>
+          <input type="date" id="wx-date" class="form-control"
+                 value="<?= date('Y-m-d') ?>"
+                 min="<?= date('Y-m-d') ?>"
+                 max="<?= date('Y-m-d', strtotime('+16 days')) ?>"/>
+        </div>
+        <div class="form-group" style="margin:0;flex:0 0 auto">
+          <label style="font-size:.75rem">Tage anzeigen</label>
+          <input type="number" id="wx-days" class="form-control" value="1" min="1" max="16" style="width:70px"/>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadWeather()" style="margin-bottom:1px">
+          🔍 Vorhersage laden
+        </button>
+      </div>
+      <div id="wx-result" style="font-size:.83rem"></div>
+      <?php endif; ?>
+    </div>
+  </div>
+
   <!-- Aktive Events -->
   <div class="card">
     <div class="card-header"><h3>📊 Bisherige Anmeldungen</h3></div>
@@ -424,6 +464,194 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
 
 </div>
 <script>
+// ── Wettervorschau (Open-Meteo) ────────────────────────────
+// ── Wettervorschau (Open-Meteo) ────────────────────────────
+var WX_LAT  = '<?= h(getSetting('weather_location_lat','')) ?>';
+var WX_LON  = '<?= h(getSetting('weather_location_lon','')) ?>';
+var WX_NAME = '<?= h(getSetting('weather_location_name','Standort')) ?>';
+
+// Beim Rennen-Wechsel: Koordinaten aus Strecke übernehmen falls vorhanden
+document.addEventListener('DOMContentLoaded', function() {
+    var raceSel = document.querySelector('select[name="race_id"]');
+    if (!raceSel) return;
+    raceSel.addEventListener('change', function() {
+        var opt = this.options[this.selectedIndex];
+        var lat = opt.getAttribute('data-lat');
+        var lon = opt.getAttribute('data-lon');
+        var loc = opt.getAttribute('data-loc');
+        if (lat && lon) {
+            WX_LAT  = lat;
+            WX_LON  = lon;
+            WX_NAME = loc || opt.text;
+            // Hinweis anzeigen
+            var hint = document.getElementById('wx-location-hint');
+            if (hint) hint.textContent = '📍 Standort: ' + WX_NAME + ' (' + lat + ', ' + lon + ')';
+        } else {
+            // Fallback auf Standard-Koordinaten aus Einstellungen
+            WX_LAT  = '<?= h(getSetting('weather_location_lat','')) ?>';
+            WX_LON  = '<?= h(getSetting('weather_location_lon','')) ?>';
+            WX_NAME = '<?= h(getSetting('weather_location_name','Standort')) ?>';
+            var hint = document.getElementById('wx-location-hint');
+            if (hint) hint.textContent = WX_LAT ? '📍 Standard: ' + WX_NAME : '⚠️ Keine Koordinaten für diese Strecke';
+        }
+    });
+});
+
+// WMO Wettercodes → Emoji + Label
+var WMO_MAP = {
+    0:  ['☀️','Klar'],
+    1:  ['🌤️','Überwiegend klar'], 2: ['⛅','Teilweise bewölkt'], 3: ['☁️','Bedeckt'],
+    45: ['🌫️','Nebel'], 48: ['🌫️','Raureif-Nebel'],
+    51: ['🌦️','Leichter Niesel'], 53: ['🌦️','Niesel'], 55: ['🌧️','Starker Niesel'],
+    61: ['🌧️','Leichter Regen'], 63: ['🌧️','Regen'], 65: ['🌧️','Starker Regen'],
+    71: ['🌨️','Leichter Schnee'], 73: ['❄️','Schnee'], 75: ['❄️','Starker Schnee'],
+    80: ['🌦️','Leichte Schauer'], 81: ['🌧️','Schauer'], 82: ['⛈️','Starke Schauer'],
+    95: ['⛈️','Gewitter'], 96: ['⛈️','Gewitter mit Hagel'], 99: ['⛈️','Starkes Gewitter'],
+};
+
+// 5 gleichmäßig verteilte Stunden zwischen 10 und 20 Uhr: 10,12,14,17,20
+var HOUR_SLOTS = [10, 12, 14, 17, 20];
+
+// Mapping Open-Meteo WMO → unser WEATHER_OPTIONS key (Annäherung)
+var WMO_TO_KEY = {
+    0: 'Clear', 1: 'LightClouds', 2: 'PartiallyCloudy', 3: 'Overcast',
+    45: 'Overcast', 48: 'Overcast',
+    51: 'CloudyDrizzle', 53: 'CloudyDrizzle', 55: 'CloudyLightRain',
+    61: 'CloudyLightRain', 63: 'OvercastRain', 65: 'OvercastHeavyRain',
+    71: 'OvercastLightRain', 73: 'OvercastRain', 75: 'OvercastHeavyRain',
+    80: 'CloudyLightRain', 81: 'OvercastRain', 82: 'OvercastHeavyRain',
+    95: 'OvercastStorm', 96: 'OvercastStorm', 99: 'OvercastStorm',
+};
+
+function loadWeather() {
+    var date = document.getElementById('wx-date').value;
+    var days = parseInt(document.getElementById('wx-days').value) || 1;
+    if (!date || !WX_LAT || !WX_LON) return;
+
+    // Enddatum berechnen
+    var startD = new Date(date);
+    var endD   = new Date(date);
+    endD.setDate(endD.getDate() + days - 1);
+    var endDate = endD.toISOString().slice(0,10);
+
+    var el = document.getElementById('wx-result');
+    el.innerHTML = '<div class="text-muted">⏳ Lade Vorhersage...</div>';
+
+    var url = 'https://api.open-meteo.com/v1/forecast'
+        + '?latitude=' + WX_LAT
+        + '&longitude=' + WX_LON
+        + '&hourly=weathercode,temperature_2m,precipitation_probability,wind_speed_10m'
+        + '&start_date=' + date
+        + '&end_date=' + endDate
+        + '&timezone=Europe%2FBerlin'
+        + '&wind_speed_unit=kmh';
+
+    fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderWeather(data, date, days, startD); })
+        .catch(function(){ el.innerHTML = '<div class="notice notice-error">❌ API-Fehler. Bitte erneut versuchen.</div>'; });
+}
+
+function renderWeather(data, startDate, days, startD) {
+    var el    = document.getElementById('wx-result');
+    var times = data.hourly.time;
+    var codes = data.hourly.weathercode;
+    var temps = data.hourly.temperature_2m;
+    var precs = data.hourly.precipitation_probability;
+    var winds = data.hourly.wind_speed_10m;
+
+    var html = '<div style="display:flex;flex-direction:column;gap:16px">';
+
+    for (var d = 0; d < days; d++) {
+        var dayD = new Date(startD);
+        dayD.setDate(dayD.getDate() + d);
+        var dayStr   = dayD.toISOString().slice(0,10);
+        var dayLabel = dayD.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+
+        // 5 Slots für diesen Tag
+        var slots = [];
+        for (var s = 0; s < HOUR_SLOTS.length; s++) {
+            var h   = HOUR_SLOTS[s];
+            var key = dayStr + 'T' + String(h).padStart(2,'0') + ':00';
+            var idx = times.indexOf(key);
+            if (idx === -1) continue;
+            var wmo  = codes[idx];
+            var info = WMO_MAP[wmo] || ['❓','Unbekannt'];
+            slots.push({
+                hour:    h,
+                emoji:   info[0],
+                label:   info[1],
+                temp:    temps[idx] !== undefined ? Math.round(temps[idx]) + '°C' : '–',
+                prec:    precs[idx] !== undefined ? precs[idx] + '%' : '–',
+                wind:    winds[idx] !== undefined ? Math.round(winds[idx]) + ' km/h' : '–',
+                wmo:     wmo,
+                wxKey:   WMO_TO_KEY[wmo] || '',
+            });
+        }
+
+        html += '<div>';
+        html += '<div style="font-weight:700;font-size:.85rem;margin-bottom:8px;color:var(--text2)">' + dayLabel + '</div>';
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+
+        slots.forEach(function(slot) {
+            html += '<div style="flex:1;min-width:90px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center">';
+            html += '<div style="font-size:.72rem;color:var(--text2);margin-bottom:4px">' + String(slot.hour).padStart(2,'0') + ':00</div>';
+            html += '<div style="font-size:1.6rem;line-height:1">' + slot.emoji + '</div>';
+            html += '<div style="font-size:.72rem;color:var(--text2);margin-top:3px;line-height:1.3">' + slot.label + '</div>';
+            html += '<div style="font-size:.78rem;font-weight:700;margin-top:5px">' + slot.temp + '</div>';
+            html += '<div style="font-size:.68rem;color:var(--text2)">💧' + slot.prec + ' 💨' + slot.wind + '</div>';
+            // Übernehmen-Button
+            if (days === 1) {
+                html += '<button type="button" onclick="applySlot(' + slots.indexOf(slot) + ','' + slot.wxKey + '')" '
+                    + 'class="btn btn-secondary btn-sm" style="margin-top:6px;font-size:.65rem;padding:2px 6px;width:100%">→ übernehmen</button>';
+            }
+            html += '</div>';
+        });
+
+        html += '</div>';
+
+        // Slots auf Wetterfelder übertragen (nur bei 1 Tag)
+        if (days === 1 && slots.length > 0) {
+            html += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+            html += '<span style="font-size:.75rem;color:var(--text2)">Alle Slots übernehmen:</span>';
+            ['wx_training','wx_quali','wx_race'].forEach(function(prefix) {
+                var label = prefix==='wx_training'?'Training':prefix==='wx_quali'?'Qualifying':'Rennen';
+                html += '<button type="button" onclick="applyAllSlots('' + prefix + '',window._wxSlots)" '
+                    + 'class="btn btn-secondary btn-sm" style="font-size:.72rem">'
+                    + '→ ' + label + '</button>';
+            });
+            html += '</div>';
+            // Slots global speichern für Übernahme
+            html += '<script>window._wxSlots = ' + JSON.stringify(slots.map(function(s){return s.wxKey;})) + ';<\/script>';
+        }
+
+        html += '</div>';
+    }
+
+    html += '</div>';
+    el.innerHTML = html;
+}
+
+function applyAllSlots(prefix, slotKeys) {
+    if (!slotKeys) return;
+    for (var i = 0; i < Math.min(5, slotKeys.length); i++) {
+        var sel = document.getElementById(prefix + '_' + (i+1));
+        if (sel && slotKeys[i]) sel.value = slotKeys[i];
+    }
+    // Sync-Dropdown aktualisieren
+    var sync = document.getElementById('sync-' + prefix);
+    if (sync && slotKeys[0]) sync.value = slotKeys[0];
+}
+
+function applySlot(slotIdx, wxKey) {
+    // Einzelnen Slot auf alle Sessions anwenden (befüllt Slot i+1)
+    ['wx_training','wx_quali','wx_race'].forEach(function(prefix) {
+        var sel = document.getElementById(prefix + '_' + (slotIdx+1));
+        if (sel && wxKey) sel.value = wxKey;
+    });
+}
+
+// ── Wetter-Sync ────────────────────────────────────────────
 function syncWeather(prefix) {
     var val = document.getElementById('sync-' + prefix).value;
     for (var i = 1; i <= 5; i++) {

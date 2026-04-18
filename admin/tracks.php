@@ -13,11 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $layoutPath = $_POST['layout_path_current'] ?? '';
         if (!empty($_FILES['image_file']['name'])) { $up=uploadFile($_FILES['image_file'],'tracks'); if($up)$imgPath=$up; }
         if (!empty($_FILES['layout_file']['name'])) { $up=uploadFile($_FILES['layout_file'],'tracks'); if($up)$layoutPath=$up; }
-        $data = [trim($_POST['name']??''),trim($_POST['location']??''),trim($_POST['country']??''),(float)($_POST['length_km']??0)?:(null),(int)($_POST['corners']??0)?:(null),trim($_POST['lap_record']??''),trim($_POST['lap_record_driver']??''),(int)($_POST['lap_record_year']??0)?:(null),$imgPath,$layoutPath,trim($_POST['description']??'')];
+        $lat = strlen(trim($_POST['lat']??'')) ? (float)$_POST['lat'] : null;
+        $lon = strlen(trim($_POST['lon']??'')) ? (float)$_POST['lon'] : null;
+        $data = [trim($_POST['name']??''),trim($_POST['location']??''),trim($_POST['country']??''),(float)($_POST['length_km']??0)?:(null),(int)($_POST['corners']??0)?:(null),trim($_POST['lap_record']??''),trim($_POST['lap_record_driver']??''),(int)($_POST['lap_record_year']??0)?:(null),$imgPath,$layoutPath,trim($_POST['description']??''),$lat,$lon];
         if ($id) {
-            $db->prepare("UPDATE tracks SET name=?,location=?,country=?,length_km=?,corners=?,lap_record=?,lap_record_driver=?,lap_record_year=?,image_path=?,layout_path=?,description=? WHERE id=?")->execute([...$data,$id]);
+            $db->prepare("UPDATE tracks SET name=?,location=?,country=?,length_km=?,corners=?,lap_record=?,lap_record_driver=?,lap_record_year=?,image_path=?,layout_path=?,description=?,lat=?,lon=? WHERE id=?")->execute([...$data,$id]);
         } else {
-            $db->prepare("INSERT INTO tracks (name,location,country,length_km,corners,lap_record,lap_record_driver,lap_record_year,image_path,layout_path,description) VALUES (?,?,?,?,?,?,?,?,?,?,?)")->execute($data);
+            $db->prepare("INSERT INTO tracks (name,location,country,length_km,corners,lap_record,lap_record_driver,lap_record_year,image_path,layout_path,description,lat,lon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute($data);
         }
         auditLog('track_save','tracks',$id);
         $_SESSION['flash']=['type'=>'success','msg'=>'✅ Strecke gespeichert!'];
@@ -53,6 +55,16 @@ require_once __DIR__ . '/includes/layout.php';
         <div class="form-row cols-2">
           <div class="form-group"><label>Ort</label><input type="text" name="location" class="form-control" value="<?= h($editing['location']??'') ?>" placeholder="Monza"/></div>
           <div class="form-group"><label>Land</label><input type="text" name="country" class="form-control" value="<?= h($editing['country']??'') ?>" placeholder="Italien"/></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label>Breitengrad (Lat) <span class="text-muted" style="font-weight:400;font-size:.75rem">für Wettervorschau</span></label>
+            <input type="text" name="lat" class="form-control" value="<?= h($editing['lat']??'') ?>" placeholder="z.B. 26.0325"/>
+          </div>
+          <div class="form-group">
+            <label>Längengrad (Lon)</label>
+            <input type="text" name="lon" class="form-control" value="<?= h($editing['lon']??'') ?>" placeholder="z.B. 50.5106"/>
+          </div>
         </div>
         <div class="form-row cols-2">
           <div class="form-group"><label>Länge (km)</label><input type="number" step="0.001" name="length_km" class="form-control" value="<?= h($editing['length_km']??'') ?>" placeholder="5.793"/></div>

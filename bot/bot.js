@@ -149,6 +149,8 @@ function buildButtons(closed = false) {
 const client = new Client({ intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
 ] });
 const openEvents = new Map(); // eventId → { messageId, channelId, threadId, data }
 
@@ -180,6 +182,7 @@ client.once('ready', async () => {
                             eventData: ev,
                         });
                         console.log(`  → Event ${ev.event_id}: R${ev.round} ${ev.track_name}, training: ${ev.time_training||'–'}, wx_training type: ${typeof ev.wx_training}, isArray: ${Array.isArray(ev.wx_training)}, raw: ${JSON.stringify(ev.wx_training)?.slice(0,80)}`);
+                        if (ev._debug) console.log(`     debug:`, JSON.stringify(ev._debug));
                     }
                 }
                 console.log(`📋 ${openEvents.size} offene Event(s) wiederhergestellt`);
@@ -259,10 +262,10 @@ client.on('interactionCreate', async interaction => {
                 try {
                     const thread = await client.channels.fetch(ev.threadId);
                     const statusLabels = { accepted:'✅ zugesagt', declined:'❌ abgesagt', maybe:'❓ Vielleicht' };
-                    let logMsg = `**${interaction.user.username}** hat ${statusLabels[status]}`;
+                    let logMsg = `**${displayName}** hat ${statusLabels[status]}`;
                     if (data.old_status && data.old_status !== status) {
                         const oldLabels = { accepted:'Zusage', declined:'Absage', maybe:'Vielleicht' };
-                        logMsg = `**${interaction.user.username}** hat geändert: ${oldLabels[data.old_status]} → ${statusLabels[status]}`;
+                        logMsg = `**${displayName}** hat geändert: ${oldLabels[data.old_status]} → ${statusLabels[status]}`;
                     }
                     await thread.send(`\`${new Date().toLocaleTimeString('de-DE')}\` ${logMsg}`);
                 } catch(e) { /* Thread nicht verfügbar */ }
@@ -275,6 +278,135 @@ client.on('interactionCreate', async interaction => {
     } catch(e) {
         console.error('Interaction-Fehler:', e.message);
         await interaction.followUp({ content: '❌ Fehler beim Speichern. Bitte erneut versuchen.', ephemeral: true });
+    }
+});
+
+// ============================================================
+// Chat-Befehle (!hp, !calendar, !result, !next, !help)
+// ============================================================
+async function fetchCommandData(command) {
+    if (!config.callback_url) return null;
+    try {
+        const res = await axios.post(config.callback_url, {
+            action:     'get_command_data',
+            command:    command,
+            bot_secret: config.bot_secret,
+        }, { timeout: 5000, headers: { 'X-Bot-Secret': config.bot_secret } });
+        return res.data;
+    } catch(e) { return null; }
+}
+
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+    if (!config.commands_enabled) return;
+
+    const ephemeral = !config.commands_public;
+    const content   = message.content.trim().toLowerCase();
+    const commands  = ['!hp','!calendar','!result','!next','!help'];
+    if (!commands.includes(content)) return;
+
+    // Bei privater Antwort: Original löschen + ephemeral via DM
+    // Da Discord keine echten Ephemeral-Messages für normale Nachrichten kennt,
+    // antworten wir bei nicht-öffentlich per DM und löschen die Anfrage
+    const reply = async (embed) => {
+        if (ephemeral) {
+            try { await message.delete(); } catch(e) {}
+            try { await message.author.send({ embeds: [embed] }); } catch(e) {
+                // DMs deaktiviert – als temporäre Nachricht senden
+                const tmp = await message.channel.send({ embeds: [embed] });
+                setTimeout(() => tmp.delete().catch(()=>{}), 15000);
+            }
+        } else {
+            await message.channel.send({ embeds: [embed] });
+        }
+    };
+
+    // !help
+    if (content === '!help') {
+        const embed = new EmbedBuilder()
+            .setColor(0xe8333a)
+            .setTitle('📖 Bot-Befehle')
+            .addFields(
+                { name: '!hp',       value: 'Link zur Liga-Webseite',                  inline: false },
+                { name: '!calendar', value: 'Saisonkalender der aktuellen Saison',      inline: false },
+                { name: '!result',   value: 'Top 3 des letzten Rennens',               inline: false },
+                { name: '!next',     value: 'Nächstes Rennen mit Datum und Uhrzeit',   inline: false },
+                { name: '!help',     value: 'Diese Hilfe anzeigen',                    inline: false },
+            );
+        await reply(embed); return;
+    }
+
+    // !hp
+    if (content === '!hp') {
+        const embed = new EmbedBuilder()
+            .setColor(0xe8333a)
+            .setTitle('🌐 Liga-Webseite')
+            .setDescription(`[${config.site_url}](${config.site_url})`);
+        await reply(embed); return;
+    }
+
+    // !calendar
+    if (content === '!calendar') {
+        const data = await fetchCommandData('calendar');
+        if (!data || data.error) {
+            await message.channel.send('❌ Keine aktive Saison gefunden.'); return;
+        }
+        const rows = data.races.map(r => {
+            const date = r.race_date ? new Date(r.race_date).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'}) : '–';
+            const time = r.race_time ? r.race_time.slice(0,5)+' Uhr' : '';
+            const done = r.race_date && new Date(r.race_date) < new Date() ? '~~' : '';
+            return `${done}R${r.round} · **${r.track_name}** · ${date}${time?' · '+time:''}${done}`;
+        }).join('
+');
+        const embed = new EmbedBuilder()
+            .setColor(0xe8333a)
+            .setTitle(`📅 Kalender – ${data.season.name}`)
+            .setDescription(rows || '–');
+        await reply(embed); return;
+    }
+
+    // !result
+    if (content === '!result') {
+        const data = await fetchCommandData('result');
+        if (!data || data.error) {
+            await message.channel.send('❌ Noch keine Ergebnisse vorhanden.'); return;
+        }
+        const medals = ['🥇','🥈','🥉'];
+        const top3str = data.top3.map(d =>
+            `${medals[d.position-1]} **${d.driver_name}**${d.team_name?' · '+d.team_name:''}${d.is_fastest_lap?' ⚡':''}`
+        ).join('
+');
+        const date = data.result.race_date ? new Date(data.result.race_date).toLocaleDateString('de-DE') : '–';
+        const url  = `${config.site_url}/results.php?id=${data.result.result_id}`;
+        const embed = new EmbedBuilder()
+            .setColor(0xe8333a)
+            .setTitle(`🏁 R${data.result.round} · ${data.result.track_name}`)
+            .setDescription(`${data.result.season_name} · ${date}`)
+            .addFields({ name: '🏆 Top 3', value: top3str || '–', inline: false })
+            .setURL(url);
+        await reply(embed); return;
+    }
+
+    // !next
+    if (content === '!next') {
+        const data = await fetchCommandData('next');
+        if (!data || !data.race) {
+            const embed = new EmbedBuilder().setColor(0x555555).setTitle('🏁 Kein weiteres Rennen').setDescription('Die Saison ist beendet oder kein Rennen geplant.');
+            await reply(embed); return;
+        }
+        const r    = data.race;
+        const date = r.race_date ? new Date(r.race_date).toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}) : '–';
+        const time = r.race_time ? r.race_time.slice(0,5)+' Uhr' : '';
+        const embed = new EmbedBuilder()
+            .setColor(0xe8333a)
+            .setTitle(`🗓️ Nächstes Rennen – R${r.round}`)
+            .setDescription(`**${r.track_name}**${r.location?' ('+r.location+')':''}`)
+            .addFields(
+                { name: '📅 Datum', value: date,        inline: true },
+                { name: '⏰ Zeit',  value: time || '–', inline: true },
+                { name: '🏆 Saison', value: r.season_name || '–', inline: true },
+            );
+        await reply(embed); return;
     }
 });
 

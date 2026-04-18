@@ -19,6 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('discord_default_time_training', trim($_POST['discord_default_time_training'] ?? ''));
         setSetting('discord_default_time_briefing', trim($_POST['discord_default_time_briefing'] ?? ''));
         setSetting('discord_default_time_race',     trim($_POST['discord_default_time_race']     ?? ''));
+        setSetting('discord_commands_enabled', isset($_POST['discord_commands_enabled']) ? '1' : '0');
+        setSetting('discord_commands_public',  isset($_POST['discord_commands_public'])  ? '1' : '0');
+        setSetting('weather_location_lat',  trim($_POST['weather_location_lat']  ?? ''));
+        setSetting('weather_location_lon',  trim($_POST['weather_location_lon']  ?? ''));
+        setSetting('weather_location_name', trim($_POST['weather_location_name'] ?? ''));
 
         // config.json für Bot schreiben
         $botToken  = getSetting('discord_bot_token','');
@@ -26,10 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $botSecret = substr(hash('sha256', $botToken), 0, 32);
         $configPath = dirname(__DIR__) . '/bot/config.json';
         $configData = json_encode([
-            'token'        => $botToken,
-            'port'         => $botPort,
-            'callback_url' => SITE_URL . '/api/discord_interaction.php',
-            'bot_secret'   => $botSecret,
+            'token'            => $botToken,
+            'port'             => $botPort,
+            'callback_url'     => SITE_URL . '/api/discord_interaction.php',
+            'bot_secret'       => $botSecret,
+            'site_url'         => SITE_URL,
+            'commands_enabled' => getSetting('discord_commands_enabled','0') === '1',
+            'commands_public'  => getSetting('discord_commands_public','1')  === '1',
         ], JSON_PRETTY_PRINT);
         @file_put_contents($configPath, $configData);
 
@@ -303,6 +311,51 @@ require_once __DIR__ . '/includes/layout.php';
         <label>Rennstart</label>
         <input type="time" name="discord_default_time_race" class="form-control"
                value="<?= h(getSetting('discord_default_time_race','')) ?>"/>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="form-group"><label style="font-weight:700;color:var(--text)">🌤️ Wettervorschau (Open-Meteo)</label></div>
+    <div class="notice notice-info mb-3" style="font-size:.82rem">
+      Open-Meteo ist kostenlos und benötigt keinen API-Key.
+      Koordinaten findest du z.B. auf <a href="https://www.latlong.net/" target="_blank">latlong.net</a>.
+    </div>
+    <div class="form-row cols-3">
+      <div class="form-group">
+        <label>Standard-Standortname</label>
+        <input type="text" name="weather_location_name" class="form-control"
+               value="<?= h(getSetting('weather_location_name','')) ?>"
+               placeholder="z.B. Bahrain"/>
+      </div>
+      <div class="form-group">
+        <label>Breitengrad (Latitude)</label>
+        <input type="text" name="weather_location_lat" class="form-control"
+               value="<?= h(getSetting('weather_location_lat','')) ?>"
+               placeholder="z.B. 26.0325"/>
+      </div>
+      <div class="form-group">
+        <label>Längengrad (Longitude)</label>
+        <input type="text" name="weather_location_lon" class="form-control"
+               value="<?= h(getSetting('weather_location_lon','')) ?>"
+               placeholder="z.B. 50.5106"/>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="form-group"><label style="font-weight:700;color:var(--text)">💬 Chat-Befehle</label></div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="discord_commands_enabled"
+                 <?= getSetting('discord_commands_enabled','0')==='1'?'checked':'' ?>/>
+          Befehle aktivieren (!hp, !calendar, !result, !next, !help)
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="discord_commands_public"
+                 <?= getSetting('discord_commands_public','1')==='1'?'checked':'' ?>/>
+          Öffentlich antworten (deaktiviert = nur für den Nutzer sichtbar)
+        </label>
       </div>
     </div>
     <button type="submit" class="btn btn-primary">💾 Speichern & config.json schreiben</button>
