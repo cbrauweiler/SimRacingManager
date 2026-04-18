@@ -146,12 +146,17 @@ function buildButtons(closed = false) {
 // ============================================================
 // Discord Client
 // ============================================================
-const client = new Client({ intents: [
+const baseIntents = [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-] });
+];
+// GuildMessages + MessageContent nur laden wenn Commands aktiviert sind
+// (MessageContent ist ein Privileged Intent – muss im Developer Portal aktiviert werden)
+if (config.commands_enabled) {
+    baseIntents.push(GatewayIntentBits.GuildMessages);
+    baseIntents.push(GatewayIntentBits.MessageContent);
+}
+const client = new Client({ intents: baseIntents });
 const openEvents = new Map(); // eventId → { messageId, channelId, threadId, data }
 
 client.once('ready', async () => {
