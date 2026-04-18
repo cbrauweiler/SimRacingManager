@@ -59,13 +59,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
     $type    = $_POST['type'] ?? '';
     $mode    = $_POST['mode'] ?? 'skip'; // skip | update | replace
     $sid     = (int)($_POST['season_id'] ?? 0);
-    $file    = $_FILES['csv_file'] ?? null;
+    $file        = $_FILES['csv_file'] ?? null;
+    $templateFile = trim($_POST['template_file'] ?? '');
 
-    if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
-        $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Upload-Fehler.']; header('Location: '.SITE_URL.'/admin/import_export.php'); exit;
+    // Template oder Upload?
+    if ($templateFile) {
+        $safePath = __DIR__ . '/templates/' . basename($templateFile);
+        if (!file_exists($safePath)) {
+            $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Template nicht gefunden.']; header('Location: '.SITE_URL.'/admin/import_export.php'); exit;
+        }
+        $handle = fopen($safePath, 'r');
+    } elseif ($file && $file['error'] === UPLOAD_ERR_OK) {
+        $handle = fopen($file['tmp_name'], 'r');
+    } else {
+        $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Bitte Template wählen oder Datei hochladen.']; header('Location: '.SITE_URL.'/admin/import_export.php'); exit;
     }
-
-    $handle = fopen($file['tmp_name'], 'r');
     // BOM entfernen
     $bom = fread($handle, 3);
     if ($bom !== chr(0xEF).chr(0xBB).chr(0xBF)) rewind($handle);
@@ -264,12 +272,22 @@ require_once __DIR__ . '/includes/layout.php';
           </select>
         </div>
 
-        <div class="form-group">
-          <label>CSV-Datei *</label>
-          <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required/>
+        <!-- Template oder eigene Datei -->
+        <div class="form-group" id="template-group" style="display:none">
+          <label>📂 Template wählen</label>
+          <select name="template_file" id="template-select" class="form-control">
+            <option value="">– kein Template –</option>
+          </select>
+          <div class="form-hint">Vorgefertigte CSV-Dateien aus <code>admin/templates/</code></div>
         </div>
 
-        <button type="submit" class="btn btn-primary"
+        <div class="form-group">
+          <label>📄 Eigene CSV-Datei <span class="text-muted" style="font-weight:400;font-size:.75rem">(überschreibt Template-Auswahl)</span></label>
+          <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv"
+                 id="csv-file-input" onchange="onFileSelect()"/>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="import-btn" disabled
                 onclick="return confirm('CSV importieren? Je nach Konflikt-Einstellung können Daten überschrieben werden.')">
           ⬆️ Importieren
         </button>
@@ -305,10 +323,57 @@ require_once __DIR__ . '/includes/layout.php';
   </div>
 </div>
 
+<?php
+// Template-Daten für JS vorbereiten
+$allTemplates = [];
+$tplDir = __DIR__ . '/templates/';
+foreach (glob($tplDir . '*.csv') ?: [] as $f) {
+    $name = basename($f, '.csv');
+    $type = stripos($name, 'track') !== false ? 'tracks' : (stripos($name, 'team') !== false ? 'teams' : 'other');
+    $allTemplates[] = ['name'=>$name, 'file'=>basename($f), 'type'=>$type];
+}
+?>
 <script>
+var TEMPLATES = <?= json_encode($allTemplates, JSON_UNESCAPED_UNICODE) ?>;
+
 function toggleSeasonField() {
     var type = document.getElementById('import-type').value;
     document.getElementById('season-field').style.display = type === 'teams' ? 'block' : 'none';
+    updateTemplates(type);
+    updateImportBtn();
 }
+
+function updateTemplates(type) {
+    var sel     = document.getElementById('template-select');
+    var group   = document.getElementById('template-group');
+    var filtered = TEMPLATES.filter(function(t){ return !type || t.type === type; });
+
+    sel.innerHTML = '<option value="">– kein Template –</option>';
+    filtered.forEach(function(t) {
+        var opt = document.createElement('option');
+        opt.value       = t.file;
+        opt.textContent = t.name.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase());
+        sel.appendChild(opt);
+    });
+
+    group.style.display = filtered.length > 0 ? 'block' : 'none';
+    sel.addEventListener('change', updateImportBtn);
+}
+
+function onFileSelect() {
+    updateImportBtn();
+}
+
+function updateImportBtn() {
+    var type      = document.getElementById('import-type').value;
+    var tplSel    = document.getElementById('template-select').value;
+    var fileInput = document.getElementById('csv-file-input');
+    var hasFile   = fileInput && fileInput.files && fileInput.files.length > 0;
+    var ready     = type && (tplSel || hasFile);
+    document.getElementById('import-btn').disabled = !ready;
+}
+
+// Init
+updateTemplates('');
 </script>
 <?php require_once __DIR__ . '/includes/layout_end.php'; ?>

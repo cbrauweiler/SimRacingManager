@@ -97,8 +97,8 @@ require_once __DIR__ . '/includes/header.php';
                 <?php else: ?><?= h(mb_substr($d['name'],0,2)) ?><?php endif; ?>
               </div>
               <span><?= h($d['name']) ?></span>
-              <?php if ($showRatings && isset($ratingsMap[$d['driver_id']])): ?>
-              <?php $dr=$ratingsMap[$d['driver_id']]; $ov=(float)$dr['overall']; ?>
+              <?php if ($showRatings && isset($ratingsMap[$d['id']])): ?>
+              <?php $dr=$ratingsMap[$d['id']]; $ov=(float)$dr['overall']; ?>
               <span style="margin-left:6px;padding:1px 6px;border-radius:10px;font-family:var(--font-display);font-weight:900;font-size:.7rem;background:rgba(0,0,0,.3);color:<?= ratingBadgeColor($ov) ?>;border:1px solid <?= ratingBadgeColor($ov) ?>44"><?= number_format($ov,1) ?></span>
               <?php endif; ?>
             </a>
