@@ -620,7 +620,7 @@ function renderWeather(data, startDate, days, startD) {
             html += '<div style="font-size:.68rem;color:var(--text2)">💧' + slot.prec + ' 💨' + slot.wind + '</div>';
             // Übernehmen-Button
             if (days === 1) {
-                html += '<button type="button" onclick="applySlot(' + slots.indexOf(slot) + ','' + slot.wxKey + '')" '
+                html += '<button type="button" onclick="applySlot(' + slots.indexOf(slot) + ',\'' + slot.wxKey + '\')" '
                     + 'class="btn btn-secondary btn-sm" style="margin-top:6px;font-size:.65rem;padding:2px 6px;width:100%">→ übernehmen</button>';
             }
             html += '</div>';
@@ -634,7 +634,7 @@ function renderWeather(data, startDate, days, startD) {
             html += '<span style="font-size:.75rem;color:var(--text2)">Alle Slots übernehmen:</span>';
             ['wx_training','wx_quali','wx_race'].forEach(function(prefix) {
                 var label = prefix==='wx_training'?'Training':prefix==='wx_quali'?'Qualifying':'Rennen';
-                html += '<button type="button" onclick="applyAllSlots('' + prefix + '',window._wxSlots)" '
+                html += '<button type="button" onclick="applyAllSlots(\'' + prefix + '\',window._wxSlots)" '
                     + 'class="btn btn-secondary btn-sm" style="font-size:.72rem">'
                     + '→ ' + label + '</button>';
             });
