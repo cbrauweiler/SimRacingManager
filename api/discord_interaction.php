@@ -151,9 +151,6 @@ if ($action === 'get_open_events') {
     exit;
 }
 
-http_response_code(400);
-echo json_encode(['error' => 'Unknown action']);
-
 // ---- Aktion: Bot-Commands Daten ----
 if ($action === 'get_command_data') {
     $cmd = $body['command'] ?? '';
@@ -194,12 +191,16 @@ if ($action === 'get_command_data') {
             SELECT rc.*, s.name AS season_name
             FROM races rc
             JOIN seasons s ON s.id=rc.season_id
-            WHERE s.is_active=1 AND rc.race_date >= CURDATE()
+            WHERE s.is_active=1
               AND rc.id NOT IN (SELECT race_id FROM results)
-            ORDER BY rc.race_date ASC, rc.round ASC LIMIT 1
+              AND (rc.race_date IS NULL OR rc.race_date >= CURDATE())
+            ORDER BY rc.round ASC LIMIT 1
         ")->fetch();
         echo json_encode(['race'=>$next ?: null]); exit;
     }
 
     echo json_encode(['error'=>'Unknown command']); exit;
 }
+
+http_response_code(400);
+echo json_encode(['error' => 'Unknown action']);

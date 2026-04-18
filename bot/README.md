@@ -14,10 +14,13 @@ Danach `config.json` einmalig generieren lassen oder manuell anlegen:
 
 ```json
 {
-  "token":        "DEIN_BOT_TOKEN",
-  "port":         3001,
-  "callback_url": "https://deine-domain.de/api/discord_interaction.php",
-  "bot_secret":   "wird_automatisch_aus_token_generiert"
+    "token": "DEIN_BOT_TOKEN",
+    "port": 3001,
+    "callback_url": "https:\/\/deine-domain.de\/api\/discord_interaction.php",
+	"bot_secret":   "wird_automatisch_aus_token_generiert",
+    "site_url": "https:\/\/deine-domain.de",
+    "commands_enabled": false,
+    "commands_public": false
 }
 ```
 
@@ -54,5 +57,6 @@ systemctl status simracing-bot
 1. https://discord.com/developers/applications → "New Application"
 2. Bot → "Add Bot" → Token kopieren
 3. Bot → Privileged Gateway Intents: **Server Members Intent** aktivieren
+4. Bot → Privileged Gateway Intents: **Message Content Intent** aktivieren
 4. OAuth2 → URL Generator → Scopes: `bot` → Bot Permissions: `Send Messages (Nachrichten senden)`, `Read Messages/View Channels (Nachrichtenverlauf anzeigen/Kanäle ansehen)`, `Create Public Threads (Öffentliche Threads erstellen)`, `Send Messages in Threads (Nachrichten in Threads senden)`, `Manage Messages (Nachrichten verwalten)`
 5. Generierten Link aufrufen → Bot in Server einladen

@@ -287,7 +287,7 @@ client.on('interactionCreate', async interaction => {
 });
 
 // ============================================================
-// Chat-Befehle (!hp, !calendar, !result, !next, !help)
+// Chat-Befehle (?hp, ?calendar, ?result, ?next, ?help)
 // ============================================================
 async function fetchCommandData(command) {
     if (!config.callback_url) return null;
@@ -307,7 +307,7 @@ client.on('messageCreate', async message => {
 
     const ephemeral = !config.commands_public;
     const content   = message.content.trim().toLowerCase();
-    const commands  = ['!hp','!calendar','!result','!next','!help'];
+    const commands  = ['?hp','?calendar','?result','?next','?help'];
     if (!commands.includes(content)) return;
 
     // Bei privater Antwort: Original löschen + ephemeral via DM
@@ -327,31 +327,32 @@ client.on('messageCreate', async message => {
     };
 
     // !help
-    if (content === '!help') {
+    if (content === '?help') {
         const embed = new EmbedBuilder()
             .setColor(0xe8333a)
             .setTitle('📖 Bot-Befehle')
             .addFields(
-                { name: '!hp',       value: 'Link zur Liga-Webseite',                  inline: false },
-                { name: '!calendar', value: 'Saisonkalender der aktuellen Saison',      inline: false },
-                { name: '!result',   value: 'Top 3 des letzten Rennens',               inline: false },
-                { name: '!next',     value: 'Nächstes Rennen mit Datum und Uhrzeit',   inline: false },
-                { name: '!help',     value: 'Diese Hilfe anzeigen',                    inline: false },
+                { name: '?hp',       value: 'Link zur Liga-Webseite',                  inline: false },
+                { name: '?calendar', value: 'Saisonkalender der aktuellen Saison',      inline: false },
+                { name: '?result',   value: 'Top 3 des letzten Rennens',               inline: false },
+                { name: '?next',     value: 'Nächstes Rennen mit Datum und Uhrzeit',   inline: false },
+                { name: '?help',     value: 'Diese Hilfe anzeigen',                    inline: false },
             );
         await reply(embed); return;
     }
 
     // !hp
-    if (content === '!hp') {
+    if (content === '?hp') {
         const embed = new EmbedBuilder()
             .setColor(0xe8333a)
             .setTitle('🌐 Liga-Webseite')
-            .setDescription(`[${config.site_url}](${config.site_url})`);
+            .setDescription(config.site_url)
+            .setURL(config.site_url);
         await reply(embed); return;
     }
 
     // !calendar
-    if (content === '!calendar') {
+    if (content === '?calendar') {
         const data = await fetchCommandData('calendar');
         if (!data || data.error) {
             await message.channel.send('❌ Keine aktive Saison gefunden.'); return;
@@ -370,7 +371,7 @@ client.on('messageCreate', async message => {
     }
 
     // !result
-    if (content === '!result') {
+    if (content === '?result') {
         const data = await fetchCommandData('result');
         if (!data || data.error) {
             await message.channel.send('❌ Noch keine Ergebnisse vorhanden.'); return;
@@ -391,7 +392,7 @@ client.on('messageCreate', async message => {
     }
 
     // !next
-    if (content === '!next') {
+    if (content === '?next') {
         const data = await fetchCommandData('next');
         if (!data || !data.race) {
             const embed = new EmbedBuilder().setColor(0x555555).setTitle('🏁 Kein weiteres Rennen').setDescription('Die Saison ist beendet oder kein Rennen geplant.');
