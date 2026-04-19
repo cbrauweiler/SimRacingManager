@@ -7,7 +7,7 @@ $pc=$s['color_primary']??'#e8333a';$sc=$s['color_secondary']??'#f5a623';$tc=$s['
 function adjH(string $h,int $a):string{$h=ltrim($h,'#');if(strlen($h)===3)$h=$h[0].$h[0].$h[1].$h[1].$h[2].$h[2];return sprintf('#%02x%02x%02x',max(0,min(255,hexdec(substr($h,0,2))+$a)),max(0,min(255,hexdec(substr($h,2,2))+$a)),max(0,min(255,hexdec(substr($h,4,2))+$a)));}
 $bg2=adjH($bg,12);$bg3=adjH($bg,22);$brd=adjH($bg,32);
 $cu=currentUser();$ap=$adminPage??'';
-$qe=getSetting('qualifying_enabled','1')==='1';$pe=getSetting('penalties_enabled','1')==='1';$ga=getSetting('google_analytics','');
+$qe=getSetting('qualifying_enabled','1')==='1';$pe=getSetting('penalties_enabled','1')==='1';
 $isEditor      = hasRole('editor');
 $isAdmin       = hasRole('admin');
 $isSuperAdmin  = hasRole('superadmin');
@@ -17,10 +17,14 @@ $isSuperAdmin  = hasRole('superadmin');
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title><?= h($adminTitle??'Admin') ?> – <?= h($s['league_name']??'Liga') ?> Admin</title>
+<?php if(getSetting('fonts_local','0')==='1' && file_exists(dirname(__DIR__,2).'/assets/fonts/BarlowCondensed-Black.woff2')): ?>
+<link rel="stylesheet" href="<?= SITE_URL ?>/assets/fonts/barlow-local.css"/>
+<?php else: ?>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<?php endif; ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/main.css"/>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/admin.css"/>
-<?php if($ga): ?><script async src="https://www.googletagmanager.com/gtag/js?id=<?= h($ga) ?>"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','<?= h($ga) ?>');</script><?php endif; ?>
+
 <style>:root{--primary:<?= h($pc)?>;--secondary:<?= h($sc)?>;--tertiary:<?= h($tc)?>;--bg:<?= h($bg)?>;--bg2:<?= h($bg2)?>;--bg3:<?= h($bg3)?>;--border:<?= h($brd)?>;--text:<?= h($tx)?>}</style>
 </head>
 <body class="admin-body">

@@ -136,7 +136,14 @@ require_once __DIR__ . '/includes/layout.php';
 </div>
 
 <!-- SortableJS von CDN -->
+<?php
+$sortableLocal = file_exists(dirname(__DIR__).'/assets/js/Sortable.min.js');
+?>
+<?php if($sortableLocal): ?>
+<script src="<?= SITE_URL ?>/assets/js/Sortable.min.js"></script>
+<?php else: ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<?php endif; ?>
 <script>
 // SortableJS initialisieren
 var sortable = new Sortable(document.getElementById('nav-list'), {

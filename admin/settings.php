@@ -64,6 +64,80 @@ $favicon = getSetting('league_favicon');
 </div>
 
 <div class="card mb-3">
+  <div class="card-header"><h3>⚖️ Impressum</h3></div>
+  <div class="card-body">
+    <div class="notice notice-info mb-3" style="font-size:.83rem">
+      Diese Angaben erscheinen auf der öffentlichen Impressum-Seite (<code>/impressum.php</code>).
+      Pflichtfelder gemäß § 5 TMG für kommerzielle / geschäftliche Anbieter.
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Name / Organisation *</label>
+        <input type="text" name="imprint_name" class="form-control"
+               value="<?= h(getSetting('imprint_name','')) ?>"
+               placeholder="Max Mustermann / GEC Simracing e.V."/>
+      </div>
+      <div class="form-group">
+        <label>E-Mail *</label>
+        <input type="email" name="imprint_email" class="form-control"
+               value="<?= h(getSetting('imprint_email','')) ?>"
+               placeholder="kontakt@example.com"/>
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Straße &amp; Hausnummer</label>
+        <input type="text" name="imprint_address" class="form-control"
+               value="<?= h(getSetting('imprint_address','')) ?>"
+               placeholder="Musterstraße 1"/>
+      </div>
+      <div class="form-group">
+        <label>PLZ &amp; Ort</label>
+        <input type="text" name="imprint_city" class="form-control"
+               value="<?= h(getSetting('imprint_city','')) ?>"
+               placeholder="12345 Musterstadt"/>
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Telefon <span class="text-muted" style="font-weight:400">(optional)</span></label>
+        <input type="text" name="imprint_phone" class="form-control"
+               value="<?= h(getSetting('imprint_phone','')) ?>"
+               placeholder="+49 123 456789"/>
+      </div>
+      <div class="form-group">
+        <label>USt-IdNr. <span class="text-muted" style="font-weight:400">(falls vorhanden)</span></label>
+        <input type="text" name="imprint_ust" class="form-control"
+               value="<?= h(getSetting('imprint_ust','')) ?>"
+               placeholder="DE123456789"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Zusätzliche Angaben <span class="text-muted" style="font-weight:400">(optional)</span></label>
+      <textarea name="imprint_extra" class="form-control" rows="3"
+                placeholder="z.B. Vereinsregister, Verantwortlicher i.S.d. § 18 Abs. 2 MStV..."><?= h(getSetting('imprint_extra','')) ?></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><h3>🌐 Technisches</h3></div>
+  <div class="card-body">
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" name="fonts_local"
+               value="1" <?= getSetting('fonts_local','0')==='1'?'checked':'' ?>/>
+        Schriften lokal laden (DSGVO-konform, benötigt Dateien in <code>assets/fonts/</code>)
+      </label>
+      <div class="form-hint">
+        Anleitung: <code>assets/fonts/README.md</code> · Solange keine Font-Dateien vorhanden sind,
+        wird automatisch Google Fonts verwendet.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
   <div class="card-header"><h3>Logo</h3></div>
   <div class="card-body">
     <div class="form-row cols-2">

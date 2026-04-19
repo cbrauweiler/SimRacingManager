@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '1.6.2');
+define('APP_VERSION', '1.7.0');
 
 function getDB(): PDO {
     static $pdo = null;
@@ -397,7 +397,7 @@ function calculateRatings(PDO $db, int $seasonId): int {
                 JOIN results r2 ON r2.id = re2.result_id
                 JOIN races rc2 ON rc2.id = r2.race_id AND rc2.season_id = :sid3
             )
-        WHERE se.season_id = :sid4 AND se.is_reserve = 0
+        WHERE se.season_id = :sid4
         GROUP BY se.driver_id
         HAVING starts >= :min_starts
     ");

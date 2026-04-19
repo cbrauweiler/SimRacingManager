@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
 
 -- Standard: admin / admin123 → sofort ändern!
 INSERT INTO `admin_users` (`username`, `password_hash`, `email`, `role`) VALUES
-('admin', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@example.com', 'superadmin')
+('admin', '$2y$10$3Joj5faQzCyPpY/4y1Ifwe/NCd3RMY7CiCHTr98RDRkg2XMWAsHY.', 'admin@example.com', 'superadmin')
 ON DUPLICATE KEY UPDATE `username` = `username`;
 
 -- -------------------------------------------------------
@@ -366,3 +366,15 @@ ALTER TABLE `discord_events`
 ALTER TABLE `tracks`
   ADD COLUMN IF NOT EXISTS `lat` DECIMAL(9,6) NULL DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS `lon` DECIMAL(9,6) NULL DEFAULT NULL;
+
+-- Migration: Impressum & lokale Fonts
+INSERT INTO `settings` (`key`, `value`) VALUES
+('imprint_name',    ''),
+('imprint_address', ''),
+('imprint_city',    ''),
+('imprint_email',   ''),
+('imprint_phone',   ''),
+('imprint_ust',     ''),
+('imprint_extra',   ''),
+('fonts_local',     '0')
+ON DUPLICATE KEY UPDATE `value` = `value`;

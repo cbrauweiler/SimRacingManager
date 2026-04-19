@@ -258,6 +258,7 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 | v1.4 | Fahrer Ratings (Racecraft, Pace, Consistency, Experience) |
 | v1.5 | Wetter API für die Rennanmeldung |
 | v1.6 | Import/Export Teams & Strecken |
+| v1.7 | Impressum, Datenschutz |
 
 ---
 

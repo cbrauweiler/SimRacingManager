@@ -97,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setSetting('reserve_scores_team',   isset($_POST['reserve_scores_team'])?'1':'0');
         setSetting('fl_only_if_finished',    isset($_POST['fl_only_if_finished'])?'1':'0');
         setSetting('pole_only_if_finished',  isset($_POST['pole_only_if_finished'])?'1':'0');
-        setSetting('google_analytics', trim($_POST['google_analytics']??''));
         auditLog('settings_system');
         $_SESSION['flash']=['type'=>'success','msg'=>'✅ System-Einstellungen gespeichert!'];
         header('Location: '.SITE_URL.'/admin/advanced.php#system'); exit;
@@ -471,11 +470,6 @@ require_once __DIR__ . '/includes/layout.php';
             <div class="text-muted" style="font-size:.82rem">Pole-Bonuspunkt wird nur vergeben wenn der Fahrer das Rennen beendet hat (nicht DNF/DSQ)</div>
           </div>
         </label>
-      </div>
-      <div class="form-group mt-3">
-        <label>Google Analytics ID (optional)</label>
-        <input type="text" name="google_analytics" class="form-control" value="<?= h(getSetting('google_analytics')) ?>" placeholder="G-XXXXXXXXXX"/>
-        <div class="input-hint">Nur die Measurement ID eintragen</div>
       </div>
       <button type="submit" class="btn btn-primary mt-2">💾 Einstellungen speichern</button>
     </form>

@@ -54,8 +54,14 @@ $socialSvgs = [
     </div>
 
   </div>
-  <div class="footer-copy container">
-    &copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by <a href="https://github.com/cbrauweiler/SimRacingManager" target="_blank">SimRace Manager <?= APP_VERSION ?></a>
+  <div class="footer-copy container" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+    <span>&copy; <?= date('Y') ?> <?= h($leagueName) ?> &mdash; Powered by <a href="https://github.com/cbrauweiler/SimRacingManager" target="_blank" rel="noopener">SimRace Manager <?= APP_VERSION ?></a></span>
+    <span style="font-size:.8rem">
+      <?php if(getSetting('imprint_name','')): ?>
+      <a href="<?= SITE_URL ?>/impressum.php" style="color:inherit;opacity:.6;margin-right:12px">Impressum</a>
+      <?php endif; ?>
+      <a href="<?= SITE_URL ?>/datenschutz.php" style="color:inherit;opacity:.6">Datenschutz</a>
+    </span>
   </div>
 </footer>
 
