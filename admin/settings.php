@@ -6,10 +6,14 @@ $adminPage  = 'settings';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireRole('admin');
-    $fields = ['league_name','league_abbr','league_sub','league_desc'];
+    $fields = ['league_name','league_abbr','league_sub','league_desc',
+               'imprint_name','imprint_address','imprint_city','imprint_email',
+               'imprint_phone','imprint_ust','imprint_extra'];
     foreach ($fields as $f) {
         setSetting($f, trim($_POST[$f] ?? ''));
     }
+    // Checkbox-Felder
+    setSetting('fonts_local', isset($_POST['fonts_local']) ? '1' : '0');
     // Logo upload
     if (!empty($_FILES['logo_file']['name'])) {
         $url = uploadFile($_FILES['logo_file'], 'logos');
