@@ -34,7 +34,7 @@ $border = adjustHex($bgColor, 32);
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title><?= h($pageTitle ?? $leagueName) ?></title>
 <?php if ($leagueLogo): ?><link rel="icon" href="<?= h($leagueLogo) ?>"/><?php endif; ?>
-<?php if(getSetting('fonts_local','0')==='1' && file_exists(__DIR__.'/../assets/fonts/BarlowCondensed-Black.woff2')): ?>
+<?php if(getSetting('fonts_local','0')==='1' && (file_exists(__DIR__.'/../assets/fonts/BarlowCondensed-Black.woff2') || file_exists(__DIR__.'/../assets/fonts/BarlowCondensed-Black.ttf'))): ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/fonts/barlow-local.css"/>
 <?php else: ?>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>

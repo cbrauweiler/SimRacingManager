@@ -17,7 +17,7 @@ $isSuperAdmin  = hasRole('superadmin');
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title><?= h($adminTitle??'Admin') ?> – <?= h($s['league_name']??'Liga') ?> Admin</title>
-<?php if(getSetting('fonts_local','0')==='1' && file_exists(dirname(__DIR__,2).'/assets/fonts/BarlowCondensed-Black.woff2')): ?>
+<?php if(getSetting('fonts_local','0')==='1' && (file_exists(dirname(__DIR__,2).'/assets/fonts/BarlowCondensed-Black.woff2') || file_exists(dirname(__DIR__,2).'/assets/fonts/BarlowCondensed-Black.ttf'))): ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/fonts/barlow-local.css"/>
 <?php else: ?>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>

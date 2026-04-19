@@ -1,75 +1,96 @@
-/* Barlow – Lokal (DSGVO-konform) */
-/* Dateien via https://gwfh.mranftl.com/fonts/barlow herunterladen */
+/* ============================================================
+   Barlow + Barlow Condensed – Lokal (DSGVO-konform)
+   Unterstützt TTF und WOFF2 – nimmt was vorhanden ist
+   ============================================================ */
 
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url('./Barlow-Light.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./Barlow-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('./Barlow-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Barlow';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('./Barlow-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Barlow';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./Barlow-Italic.woff2') format('woff2');
-}
-
-/* Barlow Condensed */
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./BarlowCondensed-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('./BarlowCondensed-SemiBold.woff2') format('woff2');
-}
+/* Barlow Condensed 700 */
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./BarlowCondensed-Bold.woff2') format('woff2');
+  src: local('Barlow Condensed Bold'),
+       url('./BarlowCondensed-Bold.woff2') format('woff2'),
+       url('./BarlowCondensed-Bold.ttf')   format('truetype');
 }
-@font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('./BarlowCondensed-ExtraBold.woff2') format('woff2');
-}
+/* Barlow Condensed 900 */
 @font-face {
   font-family: 'Barlow Condensed';
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url('./BarlowCondensed-Black.woff2') format('woff2');
+  src: local('Barlow Condensed Black'),
+       url('./BarlowCondensed-Black.woff2') format('woff2'),
+       url('./BarlowCondensed-Black.ttf')   format('truetype');
+}
+/* Barlow Condensed 400 */
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Barlow Condensed'),
+       url('./BarlowCondensed-Regular.woff2') format('woff2'),
+       url('./BarlowCondensed-Regular.ttf')   format('truetype');
+}
+/* Barlow Condensed 600 */
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Barlow Condensed SemiBold'),
+       url('./BarlowCondensed-SemiBold.woff2') format('woff2'),
+       url('./BarlowCondensed-SemiBold.ttf')   format('truetype');
+}
+
+/* Barlow 400 */
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Barlow'),
+       url('./Barlow-Regular.woff2') format('woff2'),
+       url('./Barlow-Regular.ttf')   format('truetype');
+}
+/* Barlow 500 */
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Barlow Medium'),
+       url('./Barlow-Medium.woff2') format('woff2'),
+       url('./Barlow-Medium.ttf')   format('truetype');
+}
+/* Barlow 600 */
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Barlow SemiBold'),
+       url('./Barlow-SemiBold.woff2') format('woff2'),
+       url('./Barlow-SemiBold.ttf')   format('truetype');
+}
+/* Barlow 300 */
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: local('Barlow Light'),
+       url('./Barlow-Light.woff2') format('woff2'),
+       url('./Barlow-Light.ttf')   format('truetype');
+}
+/* Barlow Italic 400 */
+@font-face {
+  font-family: 'Barlow';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Barlow Italic'),
+       url('./Barlow-Italic.woff2') format('woff2'),
+       url('./Barlow-Italic.ttf')   format('truetype');
 }

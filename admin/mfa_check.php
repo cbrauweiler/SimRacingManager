@@ -58,7 +58,7 @@ $pendingUser = h($_SESSION['mfa_pending_user'] ?? '');
 <!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Zwei-Faktor-Code – <?= h($s['league_name']??'') ?></title>
-<?php $sortableLocal = file_exists(dirname(__DIR__).'/assets/fonts/BarlowCondensed-Black.woff2'); ?>
+<?php $sortableLocal = (file_exists(dirname(__DIR__).'/assets/fonts/BarlowCondensed-Black.woff2') || file_exists(dirname(__DIR__).'/assets/fonts/BarlowCondensed-Black.ttf')); ?>
 <?php if($sortableLocal): ?>
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/fonts/barlow-local.css"/>
 <?php else: ?>
