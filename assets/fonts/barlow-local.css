@@ -10,7 +10,6 @@
   font-weight: 700;
   font-display: swap;
   src: local('Barlow Condensed Bold'),
-       url('./BarlowCondensed-Bold.woff2') format('woff2'),
        url('./BarlowCondensed-Bold.ttf')   format('truetype');
 }
 /* Barlow Condensed 900 */
@@ -20,7 +19,6 @@
   font-weight: 900;
   font-display: swap;
   src: local('Barlow Condensed Black'),
-       url('./BarlowCondensed-Black.woff2') format('woff2'),
        url('./BarlowCondensed-Black.ttf')   format('truetype');
 }
 /* Barlow Condensed 400 */
@@ -30,7 +28,6 @@
   font-weight: 400;
   font-display: swap;
   src: local('Barlow Condensed'),
-       url('./BarlowCondensed-Regular.woff2') format('woff2'),
        url('./BarlowCondensed-Regular.ttf')   format('truetype');
 }
 /* Barlow Condensed 600 */
@@ -40,7 +37,6 @@
   font-weight: 600;
   font-display: swap;
   src: local('Barlow Condensed SemiBold'),
-       url('./BarlowCondensed-SemiBold.woff2') format('woff2'),
        url('./BarlowCondensed-SemiBold.ttf')   format('truetype');
 }
 
@@ -51,7 +47,6 @@
   font-weight: 400;
   font-display: swap;
   src: local('Barlow'),
-       url('./Barlow-Regular.woff2') format('woff2'),
        url('./Barlow-Regular.ttf')   format('truetype');
 }
 /* Barlow 500 */
@@ -61,7 +56,6 @@
   font-weight: 500;
   font-display: swap;
   src: local('Barlow Medium'),
-       url('./Barlow-Medium.woff2') format('woff2'),
        url('./Barlow-Medium.ttf')   format('truetype');
 }
 /* Barlow 600 */
@@ -71,7 +65,6 @@
   font-weight: 600;
   font-display: swap;
   src: local('Barlow SemiBold'),
-       url('./Barlow-SemiBold.woff2') format('woff2'),
        url('./Barlow-SemiBold.ttf')   format('truetype');
 }
 /* Barlow 300 */
@@ -81,7 +74,6 @@
   font-weight: 300;
   font-display: swap;
   src: local('Barlow Light'),
-       url('./Barlow-Light.woff2') format('woff2'),
        url('./Barlow-Light.ttf')   format('truetype');
 }
 /* Barlow Italic 400 */
@@ -91,6 +83,5 @@
   font-weight: 400;
   font-display: swap;
   src: local('Barlow Italic'),
-       url('./Barlow-Italic.woff2') format('woff2'),
        url('./Barlow-Italic.ttf')   format('truetype');
 }
