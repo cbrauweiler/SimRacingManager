@@ -388,7 +388,11 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Chart.js -->
+<?php if(file_exists(__DIR__.'/assets/js/chart.umd.min.js')): ?>
+<script src="<?= SITE_URL ?>/assets/js/chart.umd.min.js"></script>
+<?php else: ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<?php endif; ?>
 <script>
 const ctx = document.getElementById('pts-chart');
 if (ctx) {

@@ -144,6 +144,7 @@ require_once __DIR__ . '/includes/header.php';
               });
               embed.addEventListener(Twitch.Embed.VIDEO_READY, function() {
                   var player = embed.getPlayer();
+                  if (!player || typeof player.addEventListener !== 'function') return;
                   player.addEventListener(Twitch.Player.ONLINE, function() {
                       document.getElementById('twitch-offline').style.display = 'none';
                       document.getElementById('twitch-embed').style.display   = 'block';
@@ -286,7 +287,11 @@ require_once __DIR__ . '/includes/header.php';
   </div>
   <?php endif; ?>
 </div>
+<?php if(file_exists(__DIR__.'/assets/js/chart.umd.min.js')): ?>
+<script src="<?= SITE_URL ?>/assets/js/chart.umd.min.js"></script>
+<?php else: ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<?php endif; ?>
 <script>
 const barCtx=document.getElementById('standings-bar');
 if(barCtx)new Chart(barCtx,{type:'bar',data:{labels:<?= json_encode($chartLabels) ?>,datasets:[{data:<?= json_encode($chartData) ?>,backgroundColor:<?= json_encode(array_map(fn($c)=>$c.'cc',$chartColors)) ?>,borderColor:<?= json_encode($chartColors) ?>,borderWidth:2,borderRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8888a0',font:{family:'Barlow Condensed',weight:'700'}},grid:{color:'#2a2a3a'}},y:{ticks:{color:'#8888a0'},grid:{color:'#2a2a3a'},beginAtZero:true}}}});
