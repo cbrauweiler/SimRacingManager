@@ -434,7 +434,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
             <strong>R<?= (int)$ev['round'] ?> · <?= h($ev['track_name']) ?></strong>
             <span class="text-muted" style="font-size:.8rem;margin-left:6px"><?= h($ev['season_name']) ?></span>
             <?php if ($ev['is_closed']): ?>
-              <span class="badge badge-muted" style="font-size:.65rem">Geschlossen</span>
+              <span class="badge" style="font-size:.65rem;background:#ff4444;color:#fff">Geschlossen</span>
             <?php else: ?>
               <span class="badge badge-success" style="font-size:.65rem">Aktiv</span>
             <?php endif; ?>
@@ -461,27 +461,35 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
           <span style="color:#ff8080">❌ <?= (int)$ev['cnt_no'] ?></span>
           <span style="color:#f5a623">❓ <?= (int)$ev['cnt_maybe'] ?></span>
         </div>
-        <?php if ($ev['deadline'] && !$ev['is_closed']): ?>
-        <div class="text-muted" style="font-size:.75rem;margin-top:4px">
-          ⏳ Frist: <?= date('d.m.Y H:i', strtotime($ev['deadline'])) ?> Uhr
-        </div>
+        <?php if (!$ev['is_closed']): ?>
+          <?php if ($ev['response_deadline']): ?>
+          <div class="text-muted" style="font-size:.75rem;margin-top:4px">
+            📣 Rückmeldefrist: <?= date('d.m.Y H:i', strtotime($ev['response_deadline'])) ?> Uhr
+          </div>
+          <?php endif; ?>
+          <?php if ($ev['deadline']): ?>
+          <div class="text-muted" style="font-size:.75rem;margin-top:2px">
+            ⏳ Anmeldeschluss: <?= date('d.m.Y H:i', strtotime($ev['deadline'])) ?> Uhr
+          </div>
+          <?php endif; ?>
         <?php endif; ?>
         <!-- Teilnehmerliste aufklappen -->
+        <?php
+        $sups = $db->prepare("SELECT * FROM race_signups WHERE event_id=? ORDER BY status ASC, changed_at ASC");
+        $sups->execute([$ev['id']]); $sups = $sups->fetchAll();
+        ?>
         <div id="signup-detail-<?= $ev['id'] ?>" style="display:none;margin-top:8px">
-          <?php
-          $sups = $db->prepare("SELECT * FROM race_signups WHERE event_id=? ORDER BY status ASC, changed_at ASC");
-          $sups->execute([$ev['id']]); $sups=$sups->fetchAll();
-          foreach (['accepted'=>['✅','#4cffb0'],'declined'=>['❌','#ff8080'],'maybe'=>['❓','#f5a623']] as $st=>[$ico,$col]):
+          <?php foreach (['accepted'=>['✅','#4cffb0'],'declined'=>['❌','#ff8080'],'maybe'=>['❓','#f5a623']] as $st=>[$ico,$col]):
             $filtered = array_filter($sups, fn($s)=>$s['status']===$st);
             if ($filtered): ?>
           <div style="margin-top:4px">
             <?php foreach ($filtered as $su): ?>
-            <div style="font-size:.82rem;color:<?= $col ?>"><?= $ico ?> <?= h($su['discord_username']) ?></div>
+            <div style="font-size:.82rem;color:<?= $col ?>"><?= $ico ?> <?= h($su['display_name'] ?: $su['discord_username']) ?></div>
             <?php endforeach; ?>
           </div>
           <?php endif; endforeach; ?>
         </div>
-        <?php if ($sups ?? false): ?>
+        <?php if ($sups): ?>
         <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;font-size:.72rem"
                 onclick="var d=document.getElementById('signup-detail-<?= $ev['id'] ?>');d.style.display=d.style.display==='none'?'block':'none'">
           👥 Teilnehmer anzeigen
