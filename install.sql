@@ -378,3 +378,20 @@ INSERT INTO `settings` (`key`, `value`) VALUES
 ('imprint_extra',   ''),
 ('fonts_local',     '0')
 ON DUPLICATE KEY UPDATE `value` = `value`;
+
+-- Migration: Discord Nickname bei Fahrern + neue Signup-Fristen
+ALTER TABLE `drivers`
+  ADD COLUMN IF NOT EXISTS `discord_name` VARCHAR(100) NULL DEFAULT NULL;
+
+ALTER TABLE `discord_events`
+  ADD COLUMN IF NOT EXISTS `response_deadline` DATETIME NULL DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS `signup_cols` TINYINT UNSIGNED NOT NULL DEFAULT 10;
+
+INSERT INTO `settings` (`key`, `value`) VALUES
+('discord_signup_response_hours', '24'),
+('discord_signup_cols', '10')
+ON DUPLICATE KEY UPDATE `value` = `value`;
+
+-- Migration: response_notified Flag
+ALTER TABLE `discord_events`
+  ADD COLUMN IF NOT EXISTS `response_notified` TINYINT(1) NOT NULL DEFAULT 0;

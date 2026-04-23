@@ -204,3 +204,59 @@ if ($action === 'get_command_data') {
 
 http_response_code(400);
 echo json_encode(['error' => 'Unknown action']);
+
+// ---- Aktion: Rückmeldefrist abgelaufen – fehlende Fahrer ermitteln ----
+if ($action === 'check_response_deadlines') {
+    $events = $db->query("
+        SELECT de.*, rc.race_id AS rc_race_id, rc.season_id
+        FROM discord_events de
+        JOIN races rc ON rc.id = de.race_id
+        WHERE de.is_closed = 0
+          AND de.response_deadline IS NOT NULL
+          AND de.response_deadline <= NOW()
+          AND de.response_notified = 0
+    ")->fetchAll();
+
+    // Sicherheits-Fallback falls Spalte noch nicht existiert
+    if (!$events) { echo json_encode(['to_notify' => []]); exit; }
+
+    $toNotify = [];
+    foreach ($events as $ev) {
+        // Stammfahrer dieser Saison laden
+        $drivers = $db->prepare("
+            SELECT d.name, d.discord_name
+            FROM season_entries se
+            JOIN drivers d ON d.id = se.driver_id
+            WHERE se.season_id = (SELECT season_id FROM races WHERE id = ?)
+              AND se.is_reserve = 0
+        ");
+        $drivers->execute([$ev['race_id']]);
+        $drivers = $drivers->fetchAll();
+
+        // Wer hat bereits geantwortet?
+        $responded = $db->prepare("SELECT discord_username FROM race_signups WHERE event_id=?");
+        $responded->execute([$ev['id']]);
+        $respondedNames = array_column($responded->fetchAll(), 'discord_username');
+
+        // Fehlende Fahrer: Discord-Name matchen
+        $missing = [];
+        foreach ($drivers as $d) {
+            $dname = $d['discord_name'] ?: $d['name'];
+            if (!in_array($dname, $respondedNames, true)) {
+                $missing[] = $dname;
+            }
+        }
+
+        // Als notified markieren
+        $db->prepare("UPDATE discord_events SET response_notified=1 WHERE id=?")->execute([$ev['id']]);
+
+        $toNotify[] = [
+            'event_id'   => $ev['id'],
+            'thread_id'  => $ev['thread_id'],
+            'channel_id' => $ev['channel_id'],
+            'missing'    => $missing,
+        ];
+    }
+    echo json_encode(['to_notify' => $toNotify]);
+    exit;
+}

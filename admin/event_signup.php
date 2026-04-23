@@ -82,22 +82,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $wxTraining = array_map(fn($i) => $_POST["wx_training_{$i}"] ?? 'Clear', range(1,5));
         $wxQuali    = array_map(fn($i) => $_POST["wx_quali_{$i}"]    ?? 'Clear', range(1,5));
         $wxRace     = array_map(fn($i) => $_POST["wx_race_{$i}"]     ?? 'Clear', range(1,5));
-        $deadlineHrs  = (int)($_POST['deadline_hours'] ?? 2);
-        $mentionRole  = trim($_POST['mention_role']  ?? '');
-        $extraInfo    = trim($_POST['extra_info']    ?? '');
+        $deadlineHrs      = (int)($_POST['deadline_hours']  ?? 2);
+        $responseHrs      = (int)($_POST['response_hours']  ?? 24);
+        $signupCols       = max(1,(int)($_POST['signup_cols'] ?? 10));
+        $mentionRole      = trim($_POST['mention_role']  ?? '');
+        $extraInfo        = trim($_POST['extra_info']    ?? '');
 
         $race = $db->prepare("SELECT rc.*,s.name AS season_name,s.year FROM races rc JOIN seasons s ON s.id=rc.season_id WHERE rc.id=?");
         $race->execute([$raceId]); $race=$race->fetch();
         if (!$race) { $_SESSION['flash']=['type'=>'error','msg'=>'❌ Rennen nicht gefunden.']; header('Location: '.SITE_URL.'/admin/event_signup.php'); exit; }
 
-        // Deadline berechnen
-        $raceDateTime = $race['race_date'] . ' ' . ($race['race_time'] ?: '00:00:00');
-        $deadline = date('Y-m-d H:i:s', strtotime($raceDateTime) - ($deadlineHrs * 3600));
+        // Fristen berechnen
+        $raceDateTime     = $race['race_date'] . ' ' . ($race['race_time'] ?: '00:00:00');
+        $raceTs           = strtotime($raceDateTime);
+        $deadline         = date('Y-m-d H:i:s', $raceTs - ($deadlineHrs * 3600));
+        $responseDeadline = date('Y-m-d H:i:s', $raceTs - ($responseHrs * 3600));
 
         // Event in DB speichern
         $payloadJson = json_encode($payload ?? []);
-        $db->prepare("INSERT INTO discord_events (race_id,channel_id,deadline,created_by,event_payload) VALUES (?,?,?,?,?)")
-           ->execute([$raceId, $botChannel, $deadline, currentUser()['id'], '{}']);
+        $db->prepare("INSERT INTO discord_events (race_id,channel_id,deadline,response_deadline,signup_cols,created_by,event_payload) VALUES (?,?,?,?,?,?,?)")
+           ->execute([$raceId, $botChannel, $deadline, $responseDeadline, $signupCols, currentUser()['id'], '{}']);
         $eventId = (int)$db->lastInsertId();
 
         // Payload für Bot zusammenbauen
@@ -118,7 +122,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'wx_quali'      => array_map(fn($k) => ['key'=>$k,'emoji'=>$wo[$k]['emoji']??'❓'], $wxQuali),
             'wx_race'       => array_map(fn($k) => ['key'=>$k,'emoji'=>$wo[$k]['emoji']??'❓'], $wxRace),
             'deadline'      => $deadline,
-            'deadline_hours'=> $deadlineHrs,
+            'deadline_hours'    => $deadlineHrs,
+            'response_hours'    => $responseHrs,
+            'response_deadline' => $responseDeadline,
+            'signup_cols'       => $signupCols,
             'channel_id'    => $botChannel,
             'callback_url'  => SITE_URL . '/api/discord_interaction.php',
             'bot_secret'    => substr(hash('sha256', $botToken), 0, 32),
@@ -343,10 +350,26 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
         <?php endforeach; ?>
 
         <div class="divider"></div>
-        <div class="form-group">
-          <label>⏳ Anmeldefrist (Stunden vor Rennstart)</label>
-          <input type="number" name="deadline_hours" class="form-control" value="<?= $defaultHrs ?>" min="0" max="72" style="max-width:120px"/>
-          <div class="form-hint">0 = keine Frist</div>
+        <div class="form-group"><label style="font-weight:700;color:var(--text)">⏳ Fristen (Stunden vor Rennstart)</label></div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label>Rückmeldefrist</label>
+            <input type="number" name="response_hours" class="form-control"
+                   value="<?= h(getSetting('discord_signup_response_hours','24')) ?>" min="0" max="168" style="max-width:100px"/>
+            <div class="form-hint">Bis wann Fahrer antworten sollen</div>
+          </div>
+          <div class="form-group">
+            <label>Anmeldeschluss</label>
+            <input type="number" name="deadline_hours" class="form-control"
+                   value="<?= $defaultHrs ?>" min="0" max="72" style="max-width:100px"/>
+            <div class="form-hint">Danach keine Änderung mehr</div>
+          </div>
+          <div class="form-group">
+            <label>Fahrer pro Spalte</label>
+            <input type="number" name="signup_cols" class="form-control"
+                   value="<?= h(getSetting('discord_signup_cols','10')) ?>" min="3" max="25" style="max-width:100px"/>
+            <div class="form-hint">Für Zusagen/Absagen/Vielleicht</div>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary w-full" <?= !$botReady?'disabled':'' ?>>

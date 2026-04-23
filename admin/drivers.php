@@ -16,19 +16,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $up = uploadFile($_FILES['photo_file'], 'photos', ['image/jpeg','image/png','image/webp']);
             if ($up) $photoPath = $up;
         }
-        $name        = trim($_POST['name'] ?? '');
-        $nationality = strtoupper(trim($_POST['nationality'] ?? ''));
-        $bio         = trim($_POST['bio'] ?? '');
+        $name         = trim($_POST['name']         ?? '');
+        $nationality  = strtoupper(trim($_POST['nationality']  ?? ''));
+        $bio          = trim($_POST['bio']          ?? '');
+        $discordName  = trim($_POST['discord_name'] ?? '');
 
         if (!$name) { $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Name erforderlich!']; header('Location: '.SITE_URL.'/admin/drivers.php'); exit; }
 
         if ($id) {
-            $db->prepare("UPDATE drivers SET name=?, nationality=?, photo_path=?, bio=? WHERE id=?")
-               ->execute([$name, $nationality, $photoPath, $bio, $id]);
+            $db->prepare("UPDATE drivers SET name=?, nationality=?, photo_path=?, bio=?, discord_name=? WHERE id=?")
+               ->execute([$name, $nationality, $photoPath, $bio, $discordName ?: null, $id]);
             auditLog('driver_update', 'drivers', $id, $name);
         } else {
-            $db->prepare("INSERT INTO drivers (name, nationality, photo_path, bio) VALUES (?,?,?,?)")
-               ->execute([$name, $nationality, $photoPath, $bio]);
+            $db->prepare("INSERT INTO drivers (name, nationality, photo_path, bio, discord_name) VALUES (?,?,?,?,?)")
+               ->execute([$name, $nationality, $photoPath, $bio, $discordName ?: null]);
             auditLog('driver_create', 'drivers', (int)$db->lastInsertId(), $name);
         }
         $_SESSION['flash'] = ['type'=>'success','msg'=>'✅ Fahrer gespeichert!'];
@@ -92,6 +93,13 @@ require_once __DIR__ . '/includes/layout.php';
         <div class="form-group">
           <label>Vollständiger Name *</label>
           <input type="text" name="name" class="form-control" value="<?= h($editing['name'] ?? '') ?>" required placeholder="Vorname Nachname"/>
+        </div>
+        <div class="form-group">
+          <label>Discord-Name <span class="text-muted" style="font-weight:400;font-size:.75rem">(für Race Signup Zuordnung)</span></label>
+          <input type="text" name="discord_name" class="form-control"
+                 value="<?= h($editing['discord_name'] ?? '') ?>"
+                 placeholder="z.B. Christian Brauweiler | RSM"/>
+          <div class="form-hint">Server-Nickname im Discord – exakt wie er erscheint</div>
         </div>
         <div class="form-group">
           <label>Nationalität</label>

@@ -99,18 +99,55 @@ function buildEventMessage(data, lists) {
         descParts.push(data.extra_info.trim());
     }
 
+    // Zeitplan als Code-Block (Screenshot-Stil)
+    const zeitplanBlock = zeitplan ? '```\n' + zeitplan + '```' : '–';
+
+    // Wetter als kompakte Zeile mit Emoji-Label
+    const wxLines = [];
+    if (wxTrain) wxLines.push(`☀️ Training   ${wxTrain}`);
+    if (wxQuali) wxLines.push(`☀️ Qualifying  ${wxQuali}`);
+    if (wxRace)  wxLines.push(`☀️ Rennen      ${wxRace}`);
+    const wxBlock = wxLines.length ? '```\n' + wxLines.join('\n') + '\n```' : null;
+
+    // Zweispaltige Listen (cols = signup_cols, default 10)
+    const cols = data.signup_cols || 10;
+    const splitCols = (arr) => {
+        if (!arr.length) return null;
+        const half = Math.ceil(arr.length / 2);
+        const left  = arr.slice(0, half).map(n => `👤 ${n}`).join('\n');
+        const right = arr.slice(half).map(n => `👤 ${n}`).join('\n');
+        return { left, right: right || '\u200b' };
+    };
+
+    const yesCols = accepted.length > cols ? splitCols(accepted) : null;
+    const noCols  = declined.length > cols ? splitCols(declined) : null;
+    const maybeCols = maybe.length > cols  ? splitCols(maybe)   : null;
+
+    const yesStr1   = yesCols   ? yesCols.left   : (accepted.length ? accepted.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Zusagen*');
+    const yesStr2   = yesCols   ? yesCols.right   : null;
+    const noStr1    = noCols    ? noCols.left     : (declined.length ? declined.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Absagen*');
+    const noStr2    = noCols    ? noCols.right    : null;
+    const maybeStr1 = maybeCols ? maybeCols.left  : (maybe.length ? maybe.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Rückmeldung*');
+    const maybeStr2 = maybeCols ? maybeCols.right : null;
+
+    // Response deadline
+    const respDeadline = data.response_deadline
+        ? new Date(data.response_deadline).toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) + ' Uhr'
+        : null;
+
     const embed = new EmbedBuilder()
         .setColor(0xe8333a)
         .setTitle(`🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}`)
         .setDescription(descParts.join('\n'))
         .addFields(
-            { name: '⏰ Zeitplan', value: zeitplan || '–', inline: false },
-            ...(wxTrain ? [{ name: '🌤️ Wetter Training',  value: wxTrain, inline: false }] : []),
-            ...(wxQuali ? [{ name: '🌤️ Wetter Qualifying', value: wxQuali, inline: false }] : []),
-            ...(wxRace  ? [{ name: '🌤️ Wetter Rennen',     value: wxRace,  inline: false }] : []),
-            { name: `✅ Zusagen (${accepted.length})`, value: yesStr,   inline: false },
-            { name: `❌ Absagen (${declined.length})`, value: noStr,    inline: false },
-            { name: `❓ Vielleicht (${maybe.length})`, value: maybeStr, inline: false },
+            { name: '⏰ Zeitplan', value: zeitplanBlock, inline: false },
+            ...(wxBlock ? [{ name: '🌤️ Wetter', value: wxBlock, inline: false }] : []),
+            { name: `✅ Zusagen (${accepted.length})`, value: yesStr1, inline: !!yesCols },
+            ...(yesStr2 ? [{ name: '\u200b', value: yesStr2, inline: true }] : []),
+            { name: `❌ Absagen (${declined.length})`, value: noStr1, inline: !!noCols },
+            ...(noStr2 ? [{ name: '\u200b', value: noStr2, inline: true }] : []),
+            { name: `❓ Vielleicht (${maybe.length})`, value: maybeStr1, inline: !!maybeCols },
+            ...(maybeStr2 ? [{ name: '\u200b', value: maybeStr2, inline: true }] : []),
         );
 
     if (deadline) {
@@ -580,6 +617,33 @@ setInterval(async () => {
                 console.log(`⏰ Event ${ev.event_id} (R${ev.round} ${ev.track_name}) automatisch geschlossen`);
             } catch(e) {
                 console.warn(`Fehler beim Schließen von Event ${ev.event_id}:`, e.message);
+            }
+        }
+    } catch(e) { /* Silence */ }
+}, 60000);
+
+// Response-Deadline Checker (jede Minute)
+setInterval(async () => {
+    if (!config.callback_url) return;
+    try {
+        const res = await axios.post(config.callback_url, {
+            action:     'check_response_deadlines',
+            bot_secret: config.bot_secret,
+        }, { timeout: 5000, headers: { 'X-Bot-Secret': config.bot_secret } });
+
+        const toNotify = res.data?.to_notify || [];
+        for (const ev of toNotify) {
+            if (!ev.thread_id || !ev.missing?.length) continue;
+            try {
+                const thread = await client.channels.fetch(ev.thread_id);
+                const missingList = ev.missing.map(n => `• ${n}`).join('\n');
+                await thread.send(
+                    `\`${new Date().toLocaleTimeString('de-DE')}\` ⏰ **Rückmeldefrist abgelaufen!**\n` +
+                    `Folgende Stammfahrer haben noch nicht geantwortet:\n${missingList}`
+                );
+                console.log(`⏰ Response deadline: ${ev.missing.length} fehlende Fahrer für Event ${ev.event_id}`);
+            } catch(e) {
+                console.warn(`Fehler bei Response-Deadline Event ${ev.event_id}:`, e.message);
             }
         }
     } catch(e) { /* Silence */ }
