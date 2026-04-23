@@ -395,3 +395,7 @@ ON DUPLICATE KEY UPDATE `value` = `value`;
 -- Migration: response_notified Flag
 ALTER TABLE `discord_events`
   ADD COLUMN IF NOT EXISTS `response_notified` TINYINT(1) NOT NULL DEFAULT 0;
+
+-- Migration: display_name für Race Signups
+ALTER TABLE `race_signups`
+  ADD COLUMN IF NOT EXISTS `display_name` VARCHAR(100) NULL DEFAULT NULL;

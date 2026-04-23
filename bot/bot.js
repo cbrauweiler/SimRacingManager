@@ -281,6 +281,7 @@ client.on('interactionCreate', async interaction => {
             event_id:         eventId,
             discord_user_id:  interaction.user.id,
             discord_username: accountName,   // Account-Name für stabiles Matching
+            display_name:     displayName,   // Server-Nickname für Anzeige
             status:           status,
             bot_secret:       config.bot_secret,
         }, { timeout: 8000, headers: { 'X-Bot-Secret': config.bot_secret } });

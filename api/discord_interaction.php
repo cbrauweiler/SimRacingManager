@@ -24,6 +24,7 @@ $action        = $body['action']           ?? '';
 $eventId       = (int)($body['event_id']   ?? 0);
 $discordUserId = $body['discord_user_id']  ?? '';
 $discordName   = $body['discord_username'] ?? '';
+$displayName   = $body['display_name']     ?? $discordName;
 $status        = $body['status']           ?? ''; // accepted|declined|maybe
 
 $db = getDB();
@@ -51,17 +52,17 @@ if ($action === 'signup') {
     $old->execute([$eventId, $discordUserId]); $oldRow = $old->fetch();
 
     // Upsert
-    $db->prepare("INSERT INTO race_signups (event_id,race_id,discord_user_id,discord_username,status)
-                  VALUES (?,?,?,?,?)
-                  ON DUPLICATE KEY UPDATE discord_username=VALUES(discord_username), status=VALUES(status), changed_at=NOW()")
-       ->execute([$eventId, $event['race_id'], $discordUserId, $discordName, $status]);
+    $db->prepare("INSERT INTO race_signups (event_id,race_id,discord_user_id,discord_username,display_name,status)
+                  VALUES (?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE discord_username=VALUES(discord_username), display_name=VALUES(display_name), status=VALUES(status), changed_at=NOW()")
+       ->execute([$eventId, $event['race_id'], $discordUserId, $discordName, $displayName, $status]);
 
     // Aktuelle Teilnehmerliste zurückgeben
     $signups = $db->prepare("SELECT * FROM race_signups WHERE event_id=? ORDER BY changed_at ASC");
     $signups->execute([$eventId]); $signups = $signups->fetchAll();
 
     $lists = ['accepted'=>[], 'declined'=>[], 'maybe'=>[]];
-    foreach ($signups as $s) $lists[$s['status']][] = $s['discord_username'];
+    foreach ($signups as $s) $lists[$s['status']][] = $s['display_name'] ?: $s['discord_username'];
 
     echo json_encode([
         'success'    => true,
