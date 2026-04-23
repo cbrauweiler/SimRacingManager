@@ -61,7 +61,7 @@ function formatTime(timeStr) {
     return timeStr.slice(0,5) + ' Uhr';
 }
 
-function buildEventMessage(data, lists) {
+function buildEventMessage(data, lists, closed = false) {
     const accepted = lists.accepted || [];
     const declined = lists.declined || [];
     const maybe    = lists.maybe    || [];
@@ -102,12 +102,13 @@ function buildEventMessage(data, lists) {
     // Zeitplan als Code-Block (Screenshot-Stil)
     const zeitplanBlock = zeitplan ? '```\n' + zeitplan + '```' : '–';
 
-    // Wetter als kompakte Zeile mit Emoji-Label
-    const wxLines = [];
-    if (wxTrain) wxLines.push(`☀️ Training   ${wxTrain}`);
-    if (wxQuali) wxLines.push(`☀️ Qualifying  ${wxQuali}`);
-    if (wxRace)  wxLines.push(`☀️ Rennen      ${wxRace}`);
-    const wxBlock = wxLines.length ? '```\n' + wxLines.join('\n') + '\n```' : null;
+    // Wetter: je Session ein inline Field mit Label + Emoji-Slots
+    const wxFields = [];
+    if (wxTrain) wxFields.push({ name: '🏎️ Training',   value: wxTrain, inline: true });
+    if (wxQuali) wxFields.push({ name: '⏱️ Qualifying',  value: wxQuali, inline: true });
+    if (wxRace)  wxFields.push({ name: '🏁 Rennen',      value: wxRace,  inline: true });
+    // Wenn nur 2 Sessions: leeres Feld damit Ausrichtung stimmt
+    if (wxFields.length === 2) wxFields.push({ name: '\u200b', value: '\u200b', inline: true });
 
     // Zweispaltige Listen (cols = signup_cols, default 10)
     const cols = data.signup_cols || 10;
@@ -136,12 +137,12 @@ function buildEventMessage(data, lists) {
         : null;
 
     const embed = new EmbedBuilder()
-        .setColor(0xe8333a)
+        .setColor(closed ? 0x555555 : 0x57F287)
         .setTitle(`🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}`)
         .setDescription(descParts.join('\n'))
         .addFields(
             { name: '⏰ Zeitplan', value: zeitplanBlock, inline: false },
-            ...(wxBlock ? [{ name: '🌤️ Wetter', value: wxBlock, inline: false }] : []),
+            ...wxFields,
             { name: `✅ Zusagen (${accepted.length})`, value: yesStr1, inline: !!yesCols },
             ...(yesStr2 ? [{ name: '\u200b', value: yesStr2, inline: true }] : []),
             { name: `❌ Absagen (${declined.length})`, value: noStr1, inline: !!noCols },
@@ -558,23 +559,33 @@ app.post('/close-event', async (req, res) => {
 // POST /delete-event – Nachricht + Thread löschen
 app.post('/delete-event', async (req, res) => {
     const { event_id, message_id, channel_id, thread_id } = req.body;
+    console.log(`🗑 Delete-Event: event_id=${event_id}, message_id=${message_id}, thread_id=${thread_id||'–'}`);
     try {
         // Thread zuerst löschen (bevor die Elternnachricht weg ist)
-        if (thread_id) {
+        if (thread_id && String(thread_id) !== 'null') {
             try {
-                const thread = await client.channels.fetch(thread_id);
+                const thread = await client.channels.fetch(String(thread_id));
                 await thread.delete('Anmeldung entfernt');
+                console.log(`✅ Thread ${thread_id} gelöscht`);
             } catch(e) {
-                console.warn(`Thread ${thread_id} konnte nicht gelöscht werden:`, e.message);
+                console.warn(`⚠️ Thread ${thread_id} konnte nicht gelöscht werden:`, e.message);
             }
         }
         // Nachricht löschen
-        const channel = await client.channels.fetch(channel_id);
-        const msg     = await channel.messages.fetch(message_id);
-        await msg.delete();
+        if (message_id && channel_id) {
+            try {
+                const channel = await client.channels.fetch(String(channel_id));
+                const msg     = await channel.messages.fetch(String(message_id));
+                await msg.delete();
+                console.log(`✅ Nachricht ${message_id} gelöscht`);
+            } catch(e) {
+                console.warn(`⚠️ Nachricht ${message_id} konnte nicht gelöscht werden:`, e.message);
+            }
+        }
         openEvents.delete(event_id);
         res.json({ success: true });
     } catch(e) {
+        console.error('Delete-Event Fehler:', e.message);
         res.status(500).json({ error: e.message });
     }
 });
