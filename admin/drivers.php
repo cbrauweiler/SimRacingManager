@@ -95,11 +95,11 @@ require_once __DIR__ . '/includes/layout.php';
           <input type="text" name="name" class="form-control" value="<?= h($editing['name'] ?? '') ?>" required placeholder="Vorname Nachname"/>
         </div>
         <div class="form-group">
-          <label>Discord-Name <span class="text-muted" style="font-weight:400;font-size:.75rem">(für Race Signup Zuordnung)</span></label>
+          <label>Discord-Account-Name <span class="text-muted" style="font-weight:400;font-size:.75rem">(für Race Signup Zuordnung)</span></label>
           <input type="text" name="discord_name" class="form-control"
                  value="<?= h($editing['discord_name'] ?? '') ?>"
-                 placeholder="z.B. Christian Brauweiler | RSM"/>
-          <div class="form-hint">Server-Nickname im Discord – exakt wie er erscheint</div>
+                 placeholder="z.B. christianbrauweiler"/>
+          <div class="form-hint">Discord-Username (ohne #, ohne @) – zu finden unter Einstellungen → Mein Konto</div>
         </div>
         <div class="form-group">
           <label>Nationalität</label>

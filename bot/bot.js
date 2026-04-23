@@ -264,12 +264,15 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.deferUpdate();
 
-    // Server-Nickname ermitteln (displayName = Nickname falls gesetzt, sonst Username)
-    let displayName = interaction.user.username;
+    // Account-Username verwenden (stabiler als Server-Nickname der sich ändern kann)
+    const accountName = interaction.user.username;
+
+    // Server-Nickname nur für die Anzeige im Thread-Log
+    let displayName = accountName;
     try {
         const member = await interaction.guild.members.fetch(interaction.user.id);
         displayName = member.displayName;
-    } catch(e) { /* Fallback auf username */ }
+    } catch(e) { /* Fallback */ }
 
     // An PHP-Backend melden
     try {
@@ -277,7 +280,7 @@ client.on('interactionCreate', async interaction => {
             action:           'signup',
             event_id:         eventId,
             discord_user_id:  interaction.user.id,
-            discord_username: displayName,
+            discord_username: accountName,   // Account-Name für stabiles Matching
             status:           status,
             bot_secret:       config.bot_secret,
         }, { timeout: 8000, headers: { 'X-Bot-Secret': config.bot_secret } });
