@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'round'         => $race['round'],
             'track_name'    => $race['track_name'],
             'location'      => $race['location'] ?? '',
+            'laps'          => $race['laps'] ?? null,
             'season_name'   => $race['season_name'],
             'race_date'     => $race['race_date'],
             'race_time'     => $race['race_time'],

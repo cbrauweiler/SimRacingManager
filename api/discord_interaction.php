@@ -105,7 +105,7 @@ if ($action === 'check_deadlines') {
 if ($action === 'get_open_events') {
     $events = $db->query("
         SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time,
-               rc.location, s.name AS season_name
+               rc.location, rc.laps, s.name AS season_name
         FROM discord_events de
         JOIN races rc ON rc.id = de.race_id
         JOIN seasons s ON s.id = rc.season_id
@@ -138,6 +138,7 @@ if ($action === 'get_open_events') {
         if (empty($payload['race_date']))   $payload['race_date']   = $ev['race_date'];
         if (empty($payload['season_name'])) $payload['season_name'] = $ev['season_name'];
         if (empty($payload['location']))    $payload['location']    = $ev['location'] ?? '';
+        if (empty($payload['laps']))        $payload['laps']        = $ev['laps'] ?? null;
 
         // Debug: payload_debug_info mitschicken
         $payload['_debug'] = [

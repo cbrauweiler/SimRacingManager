@@ -70,11 +70,12 @@ function buildEventMessage(data, lists, closed = false) {
         ? new Date(data.deadline).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' Uhr'
         : null;
 
-    // Zeitplan
-    let zeitplan = '';
-    if (data.time_training) zeitplan += `\`${data.time_training}\` Training\n`;
-    if (data.time_briefing) zeitplan += `\`${data.time_briefing}\` Briefing\n`;
-    if (data.time_race)     zeitplan += `\`${data.time_race}\` Start\n`;
+    // Zeitplan – nur gesetzte Zeiten anzeigen, fette Labels untereinander
+    const zeitplanLines = [];
+    if (data.time_training) zeitplanLines.push(`**Training:** ${data.time_training}`);
+    if (data.time_briefing) zeitplanLines.push(`**Briefing:** ${data.time_briefing}`);
+    if (data.time_race)     zeitplanLines.push(`**Rennen:** ${data.time_race}`);
+    const zeitplan = zeitplanLines.join('\n');
 
     // Wetter
     // wx_* sind Arrays mit 5 Slots → Emojis zusammensetzen
@@ -87,11 +88,6 @@ function buildEventMessage(data, lists, closed = false) {
     const wxQuali = wxSlots(data.wx_quali);
     const wxRace  = wxSlots(data.wx_race);
 
-    // Teilnehmerlisten
-    const yesStr   = accepted.length ? accepted.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Zusagen*';
-    const noStr    = declined.length ? declined.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Absagen*';
-    const maybeStr = maybe.length    ? maybe.map(n=>`👤 ${n}`).join('\n')    : '*Noch keine Rückmeldung*';
-
     // Beschreibung: Datum + optionale Extra-Info
     const descParts = [`**${data.season_name}** · ${formatDate(data.race_date)}`];
     if (data.extra_info && data.extra_info.trim()) {
@@ -99,8 +95,27 @@ function buildEventMessage(data, lists, closed = false) {
         descParts.push(data.extra_info.trim());
     }
 
-    // Zeitplan als Code-Block (Screenshot-Stil)
-    const zeitplanBlock = zeitplan ? '```\n' + zeitplan + '```' : '–';
+    // Teilnehmerlisten – immer 3 Spalten nebeneinander (Zusagen | Absagen | Vielleicht)
+    // Discord-Feld-Limit: 1024 Zeichen pro Wert → bei sehr langen Listen abkürzen
+    const fmtList = (arr, emptyMsg) => {
+        if (!arr.length) return emptyMsg;
+        let txt = arr.map(n => `👤 ${n}`).join('\n');
+        if (txt.length > 1024) {
+            const lines = arr.map(n => `👤 ${n}`);
+            let out = '';
+            let count = 0;
+            for (const ln of lines) {
+                if ((out.length + ln.length + 1 + 20) > 1024) break;
+                out += (out ? '\n' : '') + ln;
+                count++;
+            }
+            txt = out + `\n*…+${arr.length - count} weitere*`;
+        }
+        return txt;
+    };
+    const yesStr   = fmtList(accepted, '*Noch keine Zusagen*');
+    const noStr    = fmtList(declined, '*Noch keine Absagen*');
+    const maybeStr = fmtList(maybe,    '*Noch keine Rückmeldung*');
 
     // Wetter: je Session ein inline Field mit Label + Emoji-Slots
     const wxFields = [];
@@ -110,46 +125,39 @@ function buildEventMessage(data, lists, closed = false) {
     // Wenn nur 2 Sessions: leeres Feld damit Ausrichtung stimmt
     if (wxFields.length === 2) wxFields.push({ name: '\u200b', value: '\u200b', inline: true });
 
-    // Zweispaltige Listen (cols = signup_cols, default 10)
-    const cols = data.signup_cols || 10;
-    const splitCols = (arr) => {
-        if (!arr.length) return null;
-        const half = Math.ceil(arr.length / 2);
-        const left  = arr.slice(0, half).map(n => `👤 ${n}`).join('\n');
-        const right = arr.slice(half).map(n => `👤 ${n}`).join('\n');
-        return { left, right: right || '\u200b' };
-    };
-
-    const yesCols = accepted.length > cols ? splitCols(accepted) : null;
-    const noCols  = declined.length > cols ? splitCols(declined) : null;
-    const maybeCols = maybe.length > cols  ? splitCols(maybe)   : null;
-
-    const yesStr1   = yesCols   ? yesCols.left   : (accepted.length ? accepted.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Zusagen*');
-    const yesStr2   = yesCols   ? yesCols.right   : null;
-    const noStr1    = noCols    ? noCols.left     : (declined.length ? declined.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Absagen*');
-    const noStr2    = noCols    ? noCols.right    : null;
-    const maybeStr1 = maybeCols ? maybeCols.left  : (maybe.length ? maybe.map(n=>`👤 ${n}`).join('\n') : '*Noch keine Rückmeldung*');
-    const maybeStr2 = maybeCols ? maybeCols.right : null;
-
     // Response deadline
     const respDeadline = data.response_deadline
         ? new Date(data.response_deadline).toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) + ' Uhr'
         : null;
 
+    // Spacer-Feld (volle Breite) für sichtbaren Abstand zwischen Sektionen
+    const spacer = { name: '\u200b', value: '\u200b', inline: false };
+
+    // Titel mit optionaler Renndistanz aus dem Kalender
+    const lapsSuffix = data.laps ? ` · ${data.laps} Runden` : '';
+    const title = `🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}${lapsSuffix}`;
+
+    // Felder zusammensetzen – Zeitplan, Wetter und Anmeldungen durch Spacer getrennt
+    const fields = [];
+    if (zeitplan) {
+        fields.push({ name: '⏰ Zeitplan', value: zeitplan, inline: false });
+        fields.push(spacer);
+    }
+    if (wxFields.length) {
+        fields.push(...wxFields);
+        fields.push(spacer);
+    }
+    fields.push(
+        { name: `✅ Zusagen (${accepted.length})`,    value: yesStr,   inline: true },
+        { name: `❌ Absagen (${declined.length})`,    value: noStr,    inline: true },
+        { name: `❓ Vielleicht (${maybe.length})`,    value: maybeStr, inline: true },
+    );
+
     const embed = new EmbedBuilder()
         .setColor(closed ? 0x555555 : 0x57F287)
-        .setTitle(`🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}`)
+        .setTitle(title)
         .setDescription(descParts.join('\n'))
-        .addFields(
-            { name: '⏰ Zeitplan', value: zeitplanBlock, inline: false },
-            ...wxFields,
-            { name: `✅ Zusagen (${accepted.length})`, value: yesStr1, inline: !!yesCols },
-            ...(yesStr2 ? [{ name: '\u200b', value: yesStr2, inline: true }] : []),
-            { name: `❌ Absagen (${declined.length})`, value: noStr1, inline: !!noCols },
-            ...(noStr2 ? [{ name: '\u200b', value: noStr2, inline: true }] : []),
-            { name: `❓ Vielleicht (${maybe.length})`, value: maybeStr1, inline: !!maybeCols },
-            ...(maybeStr2 ? [{ name: '\u200b', value: maybeStr2, inline: true }] : []),
-        );
+        .addFields(...fields);
 
     if (deadline) {
         embed.setFooter({ text: `⏳ Anmeldeschluss: ${deadline}` });
