@@ -72,6 +72,7 @@ function buildEventMessage(data, lists, closed = false) {
 
     // Zeitplan – nur gesetzte Zeiten anzeigen, fette Labels untereinander
     const zeitplanLines = [];
+    if (data.laps)          zeitplanLines.push(`**Runden/Minuten:** ${data.laps}`);
     if (data.time_training) zeitplanLines.push(`**Training:** ${data.time_training}`);
     if (data.time_briefing) zeitplanLines.push(`**Briefing:** ${data.time_briefing}`);
     if (data.time_race)     zeitplanLines.push(`**Rennen:** ${data.time_race}`);
@@ -133,9 +134,8 @@ function buildEventMessage(data, lists, closed = false) {
     // Spacer-Feld (volle Breite) für sichtbaren Abstand zwischen Sektionen
     const spacer = { name: '\u200b', value: '\u200b', inline: false };
 
-    // Titel mit optionaler Renndistanz aus dem Kalender
-    const lapsSuffix = data.laps ? ` · ${data.laps} Runden` : '';
-    const title = `🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}${lapsSuffix}`;
+    // Titel
+    const title = `🏁 Runde ${data.round} · ${data.track_name}${data.location ? ` (${data.location})` : ''}`;
 
     // Felder zusammensetzen – Zeitplan, Wetter und Anmeldungen durch Spacer getrennt
     const fields = [];
