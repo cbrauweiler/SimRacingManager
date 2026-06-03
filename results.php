@@ -88,9 +88,6 @@ if ($resultId) {
         <?= $result['location'] ? ' · '.h($result['location']) : '' ?>
       </div>
     </div>
-    <?php if($result['game']): ?>
-      <span class="badge badge-info" style="font-size:.85rem;padding:6px 14px"><?= h($result['game']) ?></span>
-    <?php endif; ?>
   </div>
 
   <!-- Sheet Tabs -->
@@ -234,7 +231,7 @@ if ($resultId) {
 }
 
 // --- Results list with season dropdown ---
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC, id DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s) => $s['is_active']))[0] ?? ($seasons[0] ?? null);
 $filterSeasonId = (int)($_GET['season'] ?? ($activeSeason['id'] ?? 0));
 $selectedSeason = null;
@@ -260,7 +257,7 @@ require_once __DIR__ . '/includes/header.php';
     <div>
       <div class="section-title">Renn<span>ergebnisse</span></div>
       <div class="section-sub">
-        <?= $selectedSeason ? h($selectedSeason['name']).' '.h($selectedSeason['year']??'') : 'Alle Saisons' ?>
+        <?= $selectedSeason ? h($selectedSeason['name']) : 'Alle Saisons' ?>
         – <?= count($results) ?> Ergebnis<?= count($results) !== 1 ? 'se' : '' ?>
       </div>
     </div>
@@ -271,7 +268,7 @@ require_once __DIR__ . '/includes/header.php';
         <option value="">Alle Saisons</option>
         <?php foreach($seasons as $s): ?>
           <option value="<?= $s['id'] ?>" <?= $s['id']==$filterSeasonId ? 'selected' : '' ?>>
-            <?= h($s['name']) ?><?= $s['year'] ? ' '.$s['year'] : '' ?><?= $s['is_active'] ? ' ★' : '' ?>
+            <?= h($s['name']) ?><?= $s['is_active'] ? ' ★' : '' ?>
           </option>
         <?php endforeach; ?>
       </select>

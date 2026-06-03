@@ -141,9 +141,10 @@ chmod 755 uploads/tracks/
 | `settings` | Alle Konfigurationswerte (Key-Value) |
 | `admin_users` | Admin-Benutzer mit Rollen und Reset-Token |
 | `news` | Neuigkeiten/Blogbeiträge |
-| `seasons` | Saisons mit Aktivierungs-Flag |
+| `seasons` | Saisons mit Aktivierungs-Flag (ohne Jahr-Feld ab v1.8) |
 | `drivers` | Globale Fahrerdatenbank |
-| `teams` | Teams pro Saison |
+| `teams` | Teams (global; Saison-Zuordnung über `team_seasons`) |
+| `team_seasons` | n:m-Zuordnung Team ↔ Saison (ein Team kann in mehreren Saisons gemeldet sein) |
 | `season_entries` | Fahrer-Team-Zuordnung pro Saison |
 | `tracks` | Strecken mit Metadaten |
 | `races` | Rennen im Kalender |
@@ -259,6 +260,7 @@ Der Kanalname wird automatisch aus dem hinterlegten Twitch-Social-Link extrahier
 | v1.5 | Wetter API für die Rennanmeldung |
 | v1.6 | Import/Export Teams & Strecken |
 | v1.7 | Impressum, Datenschutz |
+| v1.8 | Saison ohne Jahr · Renndauer Runden **oder** Minuten · Teams über mehrere Saisons (n:m) · Hall of Fame bei vollständiger Saison · Kalender-Autovervollständigung (Datum +7 Tage, Standard-Rennstart) · Spielname-Badge entfernt |
 
 ---
 

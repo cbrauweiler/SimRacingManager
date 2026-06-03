@@ -4,7 +4,7 @@ define('IN_APP', true);
 require_once __DIR__ . '/includes/config.php';
 $currentPage = 'calendar';
 $db = getDB();
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s) => $s['is_active']));
 $activeSeason = $activeSeason[0] ?? ($seasons[0] ?? null);
 $seasonId = (int)($_GET['season'] ?? ($activeSeason['id'] ?? 0));
@@ -22,13 +22,13 @@ require_once __DIR__ . '/includes/header.php';
   <div class="flex flex-center justify-between mb-3" style="flex-wrap:wrap;gap:12px">
     <div>
       <div class="section-title">Renn<span>kalender</span></div>
-      <div class="section-sub"><?= $activeSeason ? h($activeSeason['name']).' '.h($activeSeason['year']??'') : '' ?></div>
+      <div class="section-sub"><?= $activeSeason ? h($activeSeason['name']) : '' ?></div>
     </div>
     <?php if (count($seasons) > 1): ?>
     <form method="get">
       <select name="season" class="form-control" onchange="this.form.submit()" style="background:var(--bg2);color:var(--text);border-color:var(--border);padding:8px 12px;border-radius:4px">
         <?php foreach ($seasons as $s): ?>
-          <option value="<?= $s['id'] ?>" <?= $s['id']==$seasonId?'selected':'' ?>><?= h($s['name']) ?> <?= h($s['year']??'') ?></option>
+          <option value="<?= $s['id'] ?>" <?= $s['id']==$seasonId?'selected':'' ?>><?= h($s['name']) ?></option>
         <?php endforeach; ?>
       </select>
     </form>
@@ -42,7 +42,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="race-round">Runde <?= (int)$r['round'] ?></div>
     <div class="flex-1">
       <div class="race-track-name"><a href="<?= SITE_URL ?>/track.php?id=<?= $r['track_id'] ?>"><?= h($r['track_name']) ?></a></div>
-      <div class="race-track-loc"><?= h($r['location']??'') ?><?= $r['country']?' · '.h($r['country']):'' ?></div>
+      <div class="race-track-loc"><?= h($r['location']??'') ?><?= $r['country']?' · '.h($r['country']):'' ?><?php $dur=raceDurationLabel((int)($r['laps']??0)?:null, $r['duration_type']??'laps'); ?><?= $dur?' · 🏁 '.h($dur):'' ?></div>
     </div>
     <div style="text-align:right">
       <div class="race-date-badge"><?= $r['race_date']?date('d.m.Y',strtotime($r['race_date'])):'TBD' ?><?= $r['race_time']?' · '.substr($r['race_time'],0,5).' Uhr':'' ?></div>

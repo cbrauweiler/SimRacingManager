@@ -123,9 +123,10 @@ if ($sid) {
             COUNT(CASE WHEN re.position = 1 THEN 1 END)    AS wins,
             COUNT(CASE WHEN re.position <= 3 THEN 1 END)   AS podiums
         FROM teams t
+        JOIN team_seasons ts ON ts.team_id = t.id AND ts.season_id = :sid
         LEFT JOIN season_entries se
               ON se.team_id = t.id
-             AND se.season_id = t.season_id
+             AND se.season_id = :sid3
              {$teamReserveFilter}
         LEFT JOIN result_entries re
               ON re.driver_id = se.driver_id
@@ -133,12 +134,11 @@ if ($sid) {
                  SELECT r.id FROM results r
                  INNER JOIN races rc ON rc.id = r.race_id AND rc.season_id = :sid2
              )
-        WHERE t.season_id = :sid
         GROUP BY t.id, t.name, t.color
         ORDER BY total_pts DESC
     ";
     $stmt2 = $db->prepare($sql2);
-    $stmt2->execute([':sid' => $sid, ':sid2' => $sid]);
+    $stmt2->execute([':sid' => $sid, ':sid2' => $sid, ':sid3' => $sid]);
     $teamStandings = $stmt2->fetchAll();
     wecSort($teamStandings, $db, $sid, 'team');
 }
@@ -151,7 +151,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="section-title">WM <span>Wertung</span></div>
     <div class="section-sub">
       <?php if($activeSeason): ?>
-        <?= h($activeSeason['name']) ?><?= $activeSeason['year'] ? ' '.$activeSeason['year'] : '' ?>
+        <?= h($activeSeason['name']) ?>
         <?php if($activeSeason['game']): ?> · 🎮 <?= h($activeSeason['game']) ?><?php endif; ?>
       <?php else: ?>Keine aktive Saison<?php endif; ?>
     </div>

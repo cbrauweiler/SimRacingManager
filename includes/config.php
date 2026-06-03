@@ -5,7 +5,7 @@
 include('config.inc.php');
 
 define('SESSION_LIFETIME', 86400);
-define('APP_VERSION', '1.7.5');
+define('APP_VERSION', '1.8.0');
 
 function getDB(): PDO {
     static $pdo = null;
@@ -132,7 +132,6 @@ function discordResultEmbed(array $race, array $entries, string $game, int $resu
         ],
         'footer' => ['text' => getSetting('league_name') . ' · ' . date('d.m.Y H:i')],
     ];
-    if ($game) $embed['fields'][] = ['name'=>'Sim', 'value'=>$game, 'inline'=>true];
     if ($link) $embed['url'] = $link;
     return [$embed];
 }
@@ -528,6 +527,11 @@ function getDriverRating(PDO $db, int $driverId, int $seasonId): ?array {
 
 // Helpers
 function h(string $s): string { return htmlspecialchars($s,ENT_QUOTES,'UTF-8'); }
+// Renndauer-Label: Runden ODER Minuten, je nach duration_type
+function raceDurationLabel(?int $laps, ?string $type): string {
+    if (!$laps) return '';
+    return $type === 'minutes' ? $laps.' Min' : $laps.' Runden';
+}
 function slug(string $s): string { $s=mb_strtolower(trim($s)); foreach(['ä'=>'ae','ö'=>'oe','ü'=>'ue','ß'=>'ss','Ä'=>'ae','Ö'=>'oe','Ü'=>'ue'] as $k=>$v) $s=str_replace($k,$v,$s); return trim(preg_replace('/[^a-z0-9]+/','-',$s),'-'); }
 function jsonResponse(mixed $data, int $code=200): never { http_response_code($code); header('Content-Type: application/json; charset=utf-8'); echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT); exit; }
 function redirect(string $url): never { header('Location: '.$url); exit; }

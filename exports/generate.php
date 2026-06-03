@@ -172,6 +172,8 @@ function tplCalendar(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     foreach($rs as $r){
         $dt=$r['race_date']?strtoupper(date('d. M Y',strtotime($r['race_date']))):'TBD';
         $loc=$r['location']?($r['country']?e($r['location']).' · '.e($r['country']):e($r['location'])):'';
+        $dur=raceDurationLabel((int)($r['laps']??0)?:null, $r['duration_type']??'laps');
+        if($dur) $loc=$loc?$loc.' · '.e($dur):e($dur);
         $rows.="<div class='tr'>
             <div class='rn'>R{$r['round']}</div>
             <div style='flex:1;min-width:0'>
@@ -184,7 +186,7 @@ function tplCalendar(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     $meta=trim(($sea['game']??'').($sea['car_class']?' · '.$sea['car_class']:''));
     $body="<div class='w'><div class='bg'></div><div class='st'></div><div class='g1'></div><div class='g2'></div><div class='sb'></div>
     <div class='c'>
-        ".hdr($c,e($sea['year']??''),'RENNKALENDER')."
+        ".hdr($c,e($sea['name']??''),'RENNKALENDER')."
         <div class='pl'>📅 &nbsp;".count($rs)." RENNEN".($meta?" &nbsp;·&nbsp; ".e($meta):'')."</div>
         <div class='bx'>
             <div class='th-row'><div class='th' style='min-width:60px'>RND</div><div class='th' style='flex:1'>STRECKE</div><div class='th' style='min-width:110px;text-align:right'>DATUM</div></div>
@@ -198,7 +200,7 @@ function tplCalendar(int $sid, bool $ig, int $W, PDO $db, array $c): string {
 // ---- LINEUP ----
 function tplLineup(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     $sea=getSeason($db,$sid); if(!$sea) return '';
-    $ts=$db->prepare("SELECT * FROM teams WHERE season_id=? ORDER BY name");$ts->execute([$sea['id']]);$ts=$ts->fetchAll();
+    $ts=$db->prepare("SELECT t.* FROM teams t JOIN team_seasons ts2 ON ts2.team_id=t.id WHERE ts2.season_id=? ORDER BY t.name");$ts->execute([$sea['id']]);$ts=$ts->fetchAll();
     $cols=$ig?1:2; $grid=$cols===2?"display:grid;grid-template-columns:1fr 1fr;gap:0 24px":"";
     $blocks='';
     foreach($ts as $t){
@@ -221,7 +223,7 @@ function tplLineup(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     }
     $body="<div class='w'><div class='bg'></div><div class='st'></div><div class='g1'></div><div class='sb'></div>
     <div class='c'>
-        ".hdr($c,e($sea['year']??''),'LINEUP')."
+        ".hdr($c,e($sea['name']??''),'LINEUP')."
         <div class='pl'>👥 &nbsp;".count($ts)." TEAMS &nbsp;·&nbsp; ".e($sea['name']??'')."</div>
         <div style='{$grid}'>{$blocks}</div>
         ".ftr($c,e($sea['name']??''))."
@@ -265,7 +267,7 @@ function tplQuali(int $raceId, bool $ig, int $W, PDO $db, array $c): string {
 
 // ---- RACE ----
 function tplRace(int $resultId, bool $ig, int $W, PDO $db, array $c): string {
-    $res=$db->prepare("SELECT r.*,rc.track_name,rc.round,rc.race_date,rc.location,s.name AS sn,s.id AS sid,s.year AS sy FROM results r JOIN races rc ON rc.id=r.race_id JOIN seasons s ON s.id=rc.season_id WHERE r.id=?");
+    $res=$db->prepare("SELECT r.*,rc.track_name,rc.round,rc.race_date,rc.location,s.name AS sn,s.id AS sid FROM results r JOIN races rc ON rc.id=r.race_id JOIN seasons s ON s.id=rc.season_id WHERE r.id=?");
     $res->execute([$resultId]);$res=$res->fetch(); if(!$res) return '';
     $bsql=buildBonusSql('re');
     // Pole-Fahrer aus Qualifying
@@ -325,7 +327,7 @@ function tplRace(int $resultId, bool $ig, int $W, PDO $db, array $c): string {
     $body="<div class='w' style='width:{$W2}px'><div class='bg'></div><div class='st'></div><div class='g1'></div><div class='g2'></div><div class='sb'></div>
     <div class='c'>
         ".hdr($c,'RENNERGEBNIS',e($res['track_name']))."
-        <div class='pl'>🏁 RUNDE ".e($res['round'])." · ".e($res['sn'])." ".e($res['sy']??'')." · {$dt}".($res['location']?' · '.e($res['location']):'').($res['game']?' · '.e($res['game']):'')."</div>
+        <div class='pl'>🏁 RUNDE ".e($res['round'])." · ".e($res['sn'])." · {$dt}".($res['location']?' · '.e($res['location']):'')."</div>
         <table class='gt'>
             <thead><tr>
                 <th style='width:42px'>POS</th>
@@ -403,7 +405,7 @@ function tplDriver(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     $W2=1400;
     $body="<div class='w' style='width:{$W2}px'><div class='bg'></div><div class='st'></div><div class='g1'></div><div class='g2'></div><div class='sb'></div>
     <div class='c'>
-        ".hdr($c,'FAHRERWERTUNG',e($sea['name']??'').' '.e($sea['year']??''))."
+        ".hdr($c,'FAHRERWERTUNG',e($sea['name']??''))."
         <div class='pl'>🏎 ".count($dr)." FAHRER · ".e($sea['name']??'')."</div>
         <table class='gt'>
             <thead><tr>
@@ -423,7 +425,7 @@ function tplDriver(int $sid, bool $ig, int $W, PDO $db, array $c): string {
             </tr></thead>
             <tbody>{$rows}</tbody>
         </table>
-        ".ftr($c,e($sea['name']??'').' '.e($sea['year']??''))."
+        ".ftr($c,e($sea['name']??''))."
     </div></div>";
     return wrap($body,css2($c,$ig,$W2));
 }
@@ -444,17 +446,18 @@ function tplTeam(int $sid, bool $ig, int $W, PDO $db, array $c): string {
             COUNT(CASE WHEN re.position<=3 THEN 1 END) AS pods,
             COUNT(CASE WHEN re.is_fastest_lap=1 THEN 1 END) AS fls,
             (SELECT COUNT(*) FROM qualifying_results qr
-             JOIN season_entries se2 ON se2.driver_id=qr.driver_id AND se2.team_id=t.id AND se2.season_id=t.season_id
-             WHERE qr.position=1 AND qr.race_id IN (SELECT rc.id FROM races rc WHERE rc.season_id=t.season_id)) AS poles,
+             JOIN season_entries se2 ON se2.driver_id=qr.driver_id AND se2.team_id=t.id AND se2.season_id=:s2
+             WHERE qr.position=1 AND qr.race_id IN (SELECT rc.id FROM races rc WHERE rc.season_id=:s3)) AS poles,
             MIN(CASE WHEN re.dnf=0 AND re.dsq=0 THEN re.position END) AS best_pos,
             COUNT(CASE WHEN re.dnf=1 OR re.dsq=1 THEN 1 END) AS dnfs
         FROM teams t
-        LEFT JOIN season_entries se ON se.team_id=t.id AND se.season_id=t.season_id {$rf}
+        JOIN team_seasons tsx ON tsx.team_id=t.id AND tsx.season_id=:s1
+        LEFT JOIN season_entries se ON se.team_id=t.id AND se.season_id=:s4 {$rf}
         LEFT JOIN result_entries re ON re.driver_id=se.driver_id AND re.result_id IN (
-            SELECT r.id FROM results r INNER JOIN races rc ON rc.id=r.race_id AND rc.season_id=t.season_id)
-        WHERE t.season_id=:s1 GROUP BY t.id,t.name,t.color ORDER BY tp DESC
+            SELECT r.id FROM results r INNER JOIN races rc ON rc.id=r.race_id AND rc.season_id=:s5)
+        GROUP BY t.id,t.name,t.color ORDER BY tp DESC
     ");
-    $st->execute([':s1'=>$sid2]);$ts=$st->fetchAll();
+    $st->execute([':s1'=>$sid2, ':s2'=>$sid2, ':s3'=>$sid2, ':s4'=>$sid2, ':s5'=>$sid2]);$ts=$st->fetchAll();
     $rows=''; $leader=null;
     foreach($ts as $i=>$t){
         $pos=$i+1; $pc=pclass($pos); $tc=e($t['color']??'#666');
@@ -481,7 +484,7 @@ function tplTeam(int $sid, bool $ig, int $W, PDO $db, array $c): string {
     $W2=1400;
     $body="<div class='w' style='width:{$W2}px'><div class='bg'></div><div class='st'></div><div class='g1'></div><div class='g2'></div><div class='sb'></div>
     <div class='c'>
-        ".hdr($c,'TEAMWERTUNG',e($sea['name']??'').' '.e($sea['year']??''))."
+        ".hdr($c,'TEAMWERTUNG',e($sea['name']??''))."
         <div class='pl'>🏭 ".count($ts)." TEAMS · ".e($sea['name']??'')."</div>
         <table class='gt'>
             <thead><tr>
@@ -500,7 +503,7 @@ function tplTeam(int $sid, bool $ig, int $W, PDO $db, array $c): string {
             </tr></thead>
             <tbody>{$rows}</tbody>
         </table>
-        ".ftr($c,e($sea['name']??'').' '.e($sea['year']??''))."
+        ".ftr($c,e($sea['name']??''))."
     </div></div>";
     return wrap($body,css2($c,$ig,$W2));
 }
@@ -585,7 +588,7 @@ function srlConfetti(string $p, string $s2, int $W): string {
 // TOP 10 – Podium mit Foto IM Kasten + großem Namen
 // ============================================================
 function tplTop10(int $resultId, bool $ig, int $W, PDO $db, array $c): string {
-    $res = $db->prepare("SELECT r.*,rc.track_name,rc.round,rc.race_date,rc.location,s.name AS sn,s.id AS sid,s.year AS sy FROM results r JOIN races rc ON rc.id=r.race_id JOIN seasons s ON s.id=rc.season_id WHERE r.id=?");
+    $res = $db->prepare("SELECT r.*,rc.track_name,rc.round,rc.race_date,rc.location,s.name AS sn,s.id AS sid FROM results r JOIN races rc ON rc.id=r.race_id JOIN seasons s ON s.id=rc.season_id WHERE r.id=?");
     $res->execute([$resultId]); $res = $res->fetch();
     if (!$res) return wrap('<p style="color:red;padding:20px">Ergebnis nicht gefunden</p>', '');
     $bsql = buildBonusSql('re');
@@ -673,7 +676,7 @@ function tplTop10(int $resultId, bool $ig, int $W, PDO $db, array $c): string {
         <div class='c' style='padding:36px 38px 34px 54px;min-height:{$W2}px'>
             <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'><tr>
                 <td valign='top'>
-                    <div class='lg'>" . htmlspecialchars($res['sn']) . " " . htmlspecialchars($res['sy'] ?? '') . "</div>
+                    <div class='lg'>" . htmlspecialchars($res['sn']) . "</div>
                     <div class='t1'>TOP 10</div>
                     <div class='t2'>" . htmlspecialchars($res['track_name']) . "</div>
                     <div style='font-size:11px;color:rgba(255,255,255,.38);margin-top:5px'>RUNDE " . htmlspecialchars($res['round']) . " &middot; {$dt}" . ($res['location'] ? ' &middot; ' . htmlspecialchars($res['location']) : '') . "</div>
@@ -729,7 +732,7 @@ function tplChampionDriver(int $sid, bool $ig, int $W, PDO $db, array $c): strin
     $p     = $c['primary']; $s2 = $c['secondary'];
     $tc    = htmlspecialchars($ch['tc'] ?? $p);
     $W2    = 1080;
-    $sname = htmlspecialchars($sea['name']??'').' '.htmlspecialchars($sea['year']??'');
+    $sname = htmlspecialchars($sea['name']??'');
     $photo = srlImgPath($ch['photo_path'] ?? '');
     $tlogo = srlImgPath($ch['tl'] ?? '');
     $init  = srlInitials($ch['name'] ?? 'XX');
@@ -810,20 +813,20 @@ function tplChampionTeam(int $sid, bool $ig, int $W, PDO $db, array $c): string 
                COUNT(DISTINCT re.result_id) AS events,
                COUNT(CASE WHEN re.is_fastest_lap=1 THEN 1 END) AS fls
         FROM teams t
-        LEFT JOIN season_entries se ON se.team_id=t.id AND se.season_id=t.season_id {$rf}
+        JOIN team_seasons tsx ON tsx.team_id=t.id AND tsx.season_id=:s1
+        LEFT JOIN season_entries se ON se.team_id=t.id AND se.season_id=:s2 {$rf}
         LEFT JOIN result_entries re ON re.driver_id=se.driver_id AND re.result_id IN (
-            SELECT r.id FROM results r INNER JOIN races rc ON rc.id=r.race_id AND rc.season_id=t.season_id)
-        WHERE t.season_id=:s1
+            SELECT r.id FROM results r INNER JOIN races rc ON rc.id=r.race_id AND rc.season_id=:s3)
         GROUP BY t.id,t.name,t.color,t.logo_path,t.car,t.nationality
         ORDER BY tp DESC,wins DESC LIMIT 1");
-    $stmt->execute([':s1'=>$sea['id']]);
+    $stmt->execute([':s1'=>$sea['id'], ':s2'=>$sea['id'], ':s3'=>$sea['id']]);
     $ch = $stmt->fetch();
     if (!$ch) return wrap('<p style="color:red;padding:20px">Keine Daten</p>','');
 
     $p     = $c['primary']; $s2 = $c['secondary'];
     $tc    = htmlspecialchars($ch['color'] ?? $p);
     $W2    = 1080;
-    $sname = htmlspecialchars($sea['name']??'').' '.htmlspecialchars($sea['year']??'');
+    $sname = htmlspecialchars($sea['name']??'');
     $tlogo = srlImgPath($ch['logo_path'] ?? '');
     $tinit = srlInitials($ch['name'] ?? 'TM');
     $trophy = srlTrophy($p, 72);

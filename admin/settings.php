@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireRole('admin');
     $fields = ['league_name','league_abbr','league_sub','league_desc',
                'imprint_name','imprint_address','imprint_city','imprint_email',
-               'imprint_phone','imprint_ust','imprint_extra'];
+               'imprint_phone','imprint_ust','imprint_extra','default_race_time'];
     foreach ($fields as $f) {
         setSetting($f, trim($_POST[$f] ?? ''));
     }
@@ -127,6 +127,14 @@ $favicon = getSetting('league_favicon');
 <div class="card mb-4">
   <div class="card-header"><h3>🌐 Technisches</h3></div>
   <div class="card-body">
+    <div class="form-group">
+      <label>Standard-Rennstart (Uhrzeit)</label>
+      <input type="time" name="default_race_time" class="form-control" style="max-width:160px"
+             value="<?= h(getSetting('default_race_time','')) ?>"/>
+      <div class="form-hint">
+        Wird beim Anlegen eines neuen Rennens im Rennkalender automatisch als Uhrzeit vorgeschlagen.
+      </div>
+    </div>
     <div class="form-group">
       <label class="checkbox-label">
         <input type="checkbox" name="fonts_local"

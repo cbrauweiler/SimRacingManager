@@ -4,7 +4,7 @@ define('IN_APP', true);
 require_once __DIR__ . '/includes/config.php';
 $currentPage = 'season';
 $db = getDB();
-$seasons = $db->query("SELECT s.*, (SELECT COUNT(*) FROM teams t WHERE t.season_id = s.id) AS team_count, (SELECT COUNT(*) FROM races r WHERE r.season_id = s.id) AS race_count FROM seasons s ORDER BY year DESC, id DESC")->fetchAll();
+$seasons = $db->query("SELECT s.*, (SELECT COUNT(*) FROM team_seasons ts WHERE ts.season_id = s.id) AS team_count, (SELECT COUNT(*) FROM races r WHERE r.season_id = s.id) AS race_count FROM seasons s ORDER BY id DESC")->fetchAll();
 $pageTitle = 'Saison – ' . getSetting('league_name');
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php foreach ($seasons as $s): ?>
     <div class="card">
       <div class="card-header">
-        <h3><?= h($s['name']) ?> <?= $s['year']?'('.$s['year'].')':'' ?></h3>
+        <h3><?= h($s['name']) ?></h3>
         <span class="badge <?= $s['is_active']?'badge-primary':'badge-muted' ?>"><?= $s['is_active']?'Aktiv':'Inaktiv' ?></span>
       </div>
       <div class="card-body">

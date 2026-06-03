@@ -9,7 +9,7 @@ $sid = $activeSeason['id'] ?? 0;
 $teams = [];
 
 if ($sid) {
-    $stmt = $db->prepare("SELECT * FROM teams WHERE season_id=? ORDER BY name");
+    $stmt = $db->prepare("SELECT t.* FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name");
     $stmt->execute([$sid]);
     $teams = $stmt->fetchAll();
 
@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="section-title">Teams &amp; <span>Fahrer</span></div>
     <div class="section-sub">
       <?php if($activeSeason): ?>
-        <?= h($activeSeason['name']) ?><?= $activeSeason['year'] ? ' '.$activeSeason['year'] : '' ?>
+        <?= h($activeSeason['name']) ?>
         <?php if($activeSeason['game']): ?> · 🎮 <?= h($activeSeason['game']) ?><?php endif; ?>
       <?php else: ?>Keine aktive Saison<?php endif; ?>
     </div>

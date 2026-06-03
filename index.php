@@ -12,7 +12,7 @@ if ($sid) {
     $q = $db->prepare("SELECT COUNT(*) FROM season_entries WHERE season_id=? AND is_reserve=0");
     $q->execute([$sid]); $cDrivers = (int)$q->fetchColumn();
 
-    $q = $db->prepare("SELECT COUNT(*) FROM teams WHERE season_id=?");
+    $q = $db->prepare("SELECT COUNT(*) FROM team_seasons WHERE season_id=?");
     $q->execute([$sid]); $cTeams = (int)$q->fetchColumn();
 
     $q = $db->prepare("SELECT COUNT(*) FROM results r INNER JOIN races rc ON rc.id=r.race_id AND rc.season_id=?");
@@ -221,7 +221,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="container section">
   <?php if($activeSeason): ?>
   <div class="flex flex-center gap-2 mb-2" style="flex-wrap:wrap">
-    <span class="badge badge-primary" style="font-size:.78rem;padding:5px 14px">🏆 Aktive Saison: <?= h($activeSeason['name']) ?><?= $activeSeason['year'] ? ' '.$activeSeason['year'] : '' ?></span>
+    <span class="badge badge-primary" style="font-size:.78rem;padding:5px 14px">🏆 Aktive Saison: <?= h($activeSeason['name']) ?></span>
     <?php if($activeSeason['game']): ?><span class="badge badge-muted" style="font-size:.75rem">🎮 <?= h($activeSeason['game']) ?></span><?php endif; ?>
     <?php if($activeSeason['car_class']??''): ?><span class="badge badge-muted" style="font-size:.75rem">🚗 <?= h($activeSeason['car_class']) ?></span><?php endif; ?>
   </div>
@@ -230,7 +230,7 @@ require_once __DIR__ . '/includes/header.php';
   <?php endif; ?>
   <div class="grid-4 mb-4">
     <?php
-    $seasonLabel = $activeSeason ? h($activeSeason['name']).' '.h($activeSeason['year']??'') : '–';
+    $seasonLabel = $activeSeason ? h($activeSeason['name']) : '–';
     foreach([
       ['num'=>$stats['drivers'], 'lbl'=>'Fahrer',        'icon'=>'🏎'],
       ['num'=>$stats['teams'],   'lbl'=>'Teams',          'icon'=>'🚗'],
@@ -264,7 +264,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <div>
       <div class="section-title">Meisterschaft <span>Wertung</span></div>
-      <div class="section-sub"><?= $activeSeason ? h($activeSeason['name']).' '.h($activeSeason['year']??'') : 'Keine aktive Saison' ?></div>
+      <div class="section-sub"><?= $activeSeason ? h($activeSeason['name']) : 'Keine aktive Saison' ?></div>
       <?php if($topDrivers): ?>
       <div class="card mb-3"><div class="card-body"><canvas id="standings-bar" height="160"></canvas></div></div>
       <?php foreach($topDrivers as $i=>$d): ?>

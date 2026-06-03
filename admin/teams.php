@@ -14,11 +14,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['logo_file']['name'])) {
             $up = uploadFile($_FILES['logo_file'], 'logos'); if ($up) $logoPath = $up;
         }
-        $data = [(int)$_POST['season_id'], trim($_POST['name']??''), strtoupper(trim($_POST['abbreviation']??'')), trim($_POST['color']??'#e8333a'), $logoPath, trim($_POST['car']??''), trim($_POST['nationality']??'')];
+        $seasonIds = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['season_ids'] ?? [])))));
+        $data = [trim($_POST['name']??''), strtoupper(trim($_POST['abbreviation']??'')), trim($_POST['color']??'#e8333a'), $logoPath, trim($_POST['car']??''), trim($_POST['nationality']??'')];
         if ($id) {
-            $db->prepare("UPDATE teams SET season_id=?,name=?,abbreviation=?,color=?,logo_path=?,car=?,nationality=? WHERE id=?")->execute([...$data,$id]);
+            $db->prepare("UPDATE teams SET name=?,abbreviation=?,color=?,logo_path=?,car=?,nationality=? WHERE id=?")->execute([...$data,$id]);
         } else {
-            $db->prepare("INSERT INTO teams (season_id,name,abbreviation,color,logo_path,car,nationality) VALUES (?,?,?,?,?,?,?)")->execute($data);
+            $db->prepare("INSERT INTO teams (name,abbreviation,color,logo_path,car,nationality) VALUES (?,?,?,?,?,?)")->execute($data);
+            $id = (int)$db->lastInsertId();
+        }
+        // Saison-Verknüpfungen synchronisieren (n:m)
+        $db->prepare("DELETE FROM team_seasons WHERE team_id=?")->execute([$id]);
+        if ($seasonIds) {
+            $ins = $db->prepare("INSERT IGNORE INTO team_seasons (team_id, season_id) VALUES (?,?)");
+            foreach ($seasonIds as $sLink) { $ins->execute([$id, $sLink]); }
         }
         $_SESSION['flash']=['type'=>'success','msg'=>'✅ Team gespeichert!'];
         header('Location: '.SITE_URL.'/admin/teams.php'); exit;
@@ -29,10 +37,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: '.SITE_URL.'/admin/teams.php'); exit;
     }
 }
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $editing = null;
-if (isset($_GET['edit'])) { $stmt=$db->prepare("SELECT * FROM teams WHERE id=?"); $stmt->execute([(int)$_GET['edit']]); $editing=$stmt->fetch(); }
-$teams = $db->query("SELECT t.*, s.name AS season_name, (SELECT COUNT(*) FROM season_entries se WHERE se.team_id=t.id) dc FROM teams t LEFT JOIN seasons s ON s.id=t.season_id ORDER BY s.year DESC, t.name")->fetchAll();
+$editingSeasonIds = [];
+if (isset($_GET['edit'])) {
+    $stmt=$db->prepare("SELECT * FROM teams WHERE id=?"); $stmt->execute([(int)$_GET['edit']]); $editing=$stmt->fetch();
+    if ($editing) {
+        $es=$db->prepare("SELECT season_id FROM team_seasons WHERE team_id=?"); $es->execute([(int)$editing['id']]);
+        $editingSeasonIds = array_map('intval', $es->fetchAll(PDO::FETCH_COLUMN));
+    }
+}
+$teams = $db->query("
+    SELECT t.*,
+           (SELECT GROUP_CONCAT(s.name ORDER BY s.id DESC SEPARATOR ', ')
+              FROM team_seasons ts JOIN seasons s ON s.id=ts.season_id WHERE ts.team_id=t.id) AS season_name,
+           (SELECT MAX(ts.season_id) FROM team_seasons ts WHERE ts.team_id=t.id) AS max_sid,
+           (SELECT COUNT(*) FROM season_entries se WHERE se.team_id=t.id) dc
+    FROM teams t
+    ORDER BY max_sid DESC, t.name
+")->fetchAll();
 require_once __DIR__ . '/includes/layout.php';
 ?>
 <div class="admin-page-title">Teams <span style="color:var(--primary)">verwalten</span></div>
@@ -44,15 +67,24 @@ require_once __DIR__ . '/includes/layout.php';
       <?php if ($editing): ?><a href="<?= SITE_URL ?>/admin/teams.php" class="btn btn-secondary btn-sm">Abbrechen</a><?php endif; ?>
     </div>
     <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
+      <form method="post" enctype="multipart/form-data" onsubmit="return teamSeasonsValid(this)">
         <input type="hidden" name="action" value="save"/>
         <input type="hidden" name="id" value="<?= $editing?(int)$editing['id']:0 ?>"/>
         <input type="hidden" name="logo_path_current" value="<?= h($editing['logo_path']??'') ?>"/>
         <div class="form-group">
-          <label>Saison *</label>
-          <select name="season_id" class="form-control" required>
-            <?php foreach ($seasons as $s): ?><option value="<?= $s['id'] ?>" <?= ($editing['season_id']??($seasons[0]['id']??0))==$s['id']?'selected':'' ?>><?= h($s['name']) ?> <?= h($s['year']??'') ?></option><?php endforeach; ?>
-          </select>
+          <label>Saisons *</label>
+          <?php $teamSel = $editing ? $editingSeasonIds : ($seasons ? [(int)$seasons[0]['id']] : []); ?>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">
+            <?php if (!$seasons): ?>
+              <span class="text-muted">Noch keine Saisons angelegt.</span>
+            <?php else: foreach ($seasons as $s): ?>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" name="season_ids[]" value="<?= (int)$s['id'] ?>" <?= in_array((int)$s['id'], $teamSel, true)?'checked':'' ?>/>
+              <span><?= h($s['name']) ?><?= $s['is_active']?' ★':'' ?></span>
+            </label>
+            <?php endforeach; endif; ?>
+          </div>
+          <div class="input-hint">Ein Team kann in mehreren Saisons gemeldet sein.</div>
         </div>
         <div class="form-row cols-2">
           <div class="form-group"><label>Teamname *</label><input type="text" name="name" class="form-control" value="<?= h($editing['name']??'') ?>" required/></div>
@@ -103,4 +135,13 @@ require_once __DIR__ . '/includes/layout.php';
     </div>
   </div>
 </div>
+<script>
+function teamSeasonsValid(form){
+  if (form.querySelectorAll('input[name="season_ids[]"]:checked').length === 0){
+    alert('Bitte mindestens eine Saison auswählen.');
+    return false;
+  }
+  return true;
+}
+</script>
 <?php require_once __DIR__ . '/includes/layout_end.php'; ?>

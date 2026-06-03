@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action']??'') === 'save_lm
 // ============================================================
 // STEP 1: Rennen wählen (GET oder POST mit race_id_selected)
 // ============================================================
-$races      = $db->query("SELECT rc.*, s.id AS season_id, s.name AS season_name, s.year AS season_year FROM races rc JOIN seasons s ON s.id=rc.season_id ORDER BY s.year DESC, rc.race_date DESC")->fetchAll();
+$races      = $db->query("SELECT rc.*, s.id AS season_id, s.name AS season_name FROM races rc JOIN seasons s ON s.id=rc.season_id ORDER BY s.id DESC, rc.race_date DESC")->fetchAll();
 $selectedRaceId = (int)($_REQUEST['race_id_selected'] ?? 0);
 $selectedRace   = null;
 $seasonId       = 0;
@@ -260,7 +260,7 @@ if ($selectedRaceId) {
         $lineupDrivers = $stmt->fetchAll();
 
         // Teams der Saison
-        $stmt2 = $db->prepare("SELECT * FROM teams WHERE season_id=? ORDER BY name");
+        $stmt2 = $db->prepare("SELECT t.* FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name");
         $stmt2->execute([$seasonId]);
         $lineupTeams = $stmt2->fetchAll();
     }
@@ -331,7 +331,7 @@ require_once __DIR__ . '/includes/layout.php';
             $currentSeason = null;
             foreach($races as $r):
               // Trennlinie zwischen Saisons
-              $seasonLabel = $r['season_name'].' '.($r['season_year']??'');
+              $seasonLabel = $r['season_name'];
               if ($seasonLabel !== $currentSeason):
                 $currentSeason = $seasonLabel;
             ?>
@@ -349,7 +349,7 @@ require_once __DIR__ . '/includes/layout.php';
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-size:.88rem">
             <div class="font-display font-bold" style="font-size:1rem"><?= h($selectedRace['track_name']) ?></div>
             <div class="text-muted">
-              <?= h($selectedRace['season_name']) ?> <?= h($selectedRace['season_year']??'') ?>
+              <?= h($selectedRace['season_name']) ?>
               · Runde <?= (int)$selectedRace['round'] ?>
               <?= $selectedRace['race_date'] ? ' · '.date('d.m.Y',strtotime($selectedRace['race_date'])) : '' ?>
             </div>

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Alle Saisons
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 
 // Aktuelle Ratings laden
 $ratings = [];
@@ -105,7 +105,7 @@ require_once __DIR__ . '/includes/layout.php';
             <select name="season_id" class="form-control">
               <?php foreach ($seasons as $s): ?>
               <option value="<?= $s['id'] ?>" <?= $s['id']==$sid?'selected':'' ?>>
-                <?= h($s['name']) ?> <?= h($s['year']??'') ?> <?= $s['is_active']?'(aktiv)':'' ?>
+                <?= h($s['name']) ?> <?= $s['is_active']?'(aktiv)':'' ?>
               </option>
               <?php endforeach; ?>
             </select>

@@ -11,7 +11,7 @@ $TEAM_FIELDS  = ['name','abbreviation','color','car','nationality'];
 
 // Aktive Saison
 $activeSeason = $db->query("SELECT * FROM seasons WHERE is_active=1 LIMIT 1")->fetch();
-$seasons      = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons      = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 
 // ============================================================
 // EXPORT
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
     if ($type === 'teams') {
         $sid = (int)($_POST['season_id'] ?? 0);
         if (!$sid) { $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Bitte Saison wählen.']; header('Location: '.SITE_URL.'/admin/import_export.php'); exit; }
-        $rows = $db->prepare("SELECT t.".implode(',t.',$TEAM_FIELDS)." FROM teams t WHERE t.season_id=? ORDER BY t.name ASC");
+        $rows = $db->prepare("SELECT t.".implode(',t.',$TEAM_FIELDS)." FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name ASC");
         $rows->execute([$sid]); $rows = $rows->fetchAll();
         $season = array_values(array_filter($seasons, fn($s)=>$s['id']==$sid))[0] ?? null;
         $filename = 'teams_'.($season['name']??'season').'_'.date('Y-m-d').'.csv';
@@ -129,14 +129,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
     if ($type === 'teams') {
         if (!$sid) { $_SESSION['flash'] = ['type'=>'error','msg'=>'❌ Bitte Saison wählen.']; header('Location: '.SITE_URL.'/admin/import_export.php'); exit; }
         if ($mode === 'replace') {
-            $db->prepare("DELETE FROM teams WHERE season_id=?")->execute([$sid]);
+            // Nur die Verknüpfung zu dieser Saison lösen; verwaiste Teams (ohne weitere Saison) entfernen
+            $tIds = $db->prepare("SELECT team_id FROM team_seasons WHERE season_id=?");
+            $tIds->execute([$sid]);
+            $tIds = array_map('intval', $tIds->fetchAll(PDO::FETCH_COLUMN));
+            $db->prepare("DELETE FROM team_seasons WHERE season_id=?")->execute([$sid]);
+            if ($tIds) {
+                $delOrphan = $db->prepare("DELETE FROM teams WHERE id=? AND NOT EXISTS (SELECT 1 FROM team_seasons ts WHERE ts.team_id=teams.id)");
+                foreach ($tIds as $tid) { $delOrphan->execute([$tid]); }
+            }
         }
+        $linkSeason = $db->prepare("INSERT IGNORE INTO team_seasons (team_id, season_id) VALUES (?,?)");
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
             if (count($row) < 1) continue;
             $data = array_combine(array_slice($header, 0, count($row)), $row);
             $name = trim($data['name'] ?? '');
             if (!$name) { $skipped++; continue; }
-            $exStmt = $db->prepare("SELECT id FROM teams WHERE name=? AND season_id=?"); $exStmt->execute([$name,$sid]); $existing = $exStmt->fetchColumn();
+            $exStmt = $db->prepare("SELECT t.id FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE t.name=? AND ts.season_id=?"); $exStmt->execute([$name,$sid]); $existing = $exStmt->fetchColumn();
             try {
                 if ($existing && $mode !== 'replace') {
                     if ($mode === 'skip') { $skipped++; continue; }
@@ -144,8 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
                        ->execute([$data['abbreviation']??null, $data['color']??'#e8333a', $data['car']??null, $data['nationality']??null, $existing]);
                     $updated++;
                 } else {
-                    $db->prepare("INSERT INTO teams (season_id,name,abbreviation,color,car,nationality) VALUES (?,?,?,?,?,?)")
-                       ->execute([$sid, $name, $data['abbreviation']??null, $data['color']??'#e8333a', $data['car']??null, $data['nationality']??null]);
+                    $db->prepare("INSERT INTO teams (name,abbreviation,color,car,nationality) VALUES (?,?,?,?,?)")
+                       ->execute([$name, $data['abbreviation']??null, $data['color']??'#e8333a', $data['car']??null, $data['nationality']??null]);
+                    $linkSeason->execute([(int)$db->lastInsertId(), $sid]);
                     $inserted++;
                 }
             } catch (\Throwable $e) { $errors[] = "Team '$name': ".$e->getMessage(); }
@@ -218,7 +228,7 @@ require_once __DIR__ . '/includes/layout.php';
             <option value="">– Saison wählen –</option>
             <?php foreach ($seasons as $s): ?>
             <option value="<?= $s['id'] ?>" <?= ($activeSeason && $s['id']==$activeSeason['id'])?'selected':'' ?>>
-              <?= h($s['name']) ?> <?= h($s['year']??'') ?>
+              <?= h($s['name']) ?>
             </option>
             <?php endforeach; ?>
           </select>
@@ -257,7 +267,7 @@ require_once __DIR__ . '/includes/layout.php';
             <option value="">– Saison wählen –</option>
             <?php foreach ($seasons as $s): ?>
             <option value="<?= $s['id'] ?>" <?= ($activeSeason && $s['id']==$activeSeason['id'])?'selected':'' ?>>
-              <?= h($s['name']) ?> <?= h($s['year']??'') ?>
+              <?= h($s['name']) ?>
             </option>
             <?php endforeach; ?>
           </select>

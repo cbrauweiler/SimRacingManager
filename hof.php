@@ -5,7 +5,7 @@ $currentPage = 'hof';
 $db = getDB();
 
 // Alle Saisons oder aktive Saison filtern
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $filterSid = (int)($_GET['season'] ?? 0);
 
 // SQL-Filter
@@ -113,7 +113,7 @@ $topWinRate = $db->query("
 // ---- WM-Sieger je Saison ----
 // Fahrer-Champion: höchste Gesamtpunkte pro Saison
 $driverChampions = $db->query("
-    SELECT s.id AS sid, s.name AS season_name, s.year,
+    SELECT s.id AS sid, s.name AS season_name,
            d.id AS driver_id, d.name AS driver_name, d.photo_path, d.nationality,
            t.name AS team_name, t.color AS team_color,
            COALESCE(SUM({$bsql}), 0) AS total_pts,
@@ -124,10 +124,20 @@ $driverChampions = $db->query("
     LEFT JOIN teams t ON t.id = se.team_id
     LEFT JOIN result_entries re ON re.driver_id = d.id
         AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
-    WHERE s.is_active = 0
-    GROUP BY s.id, s.name, s.year, d.id, d.name, d.photo_path, d.nationality, t.name, t.color
+    WHERE (
+        s.is_active = 0
+        OR (
+            EXISTS (SELECT 1 FROM races rc0 WHERE rc0.season_id = s.id)
+            AND NOT EXISTS (
+                SELECT 1 FROM races rc0
+                WHERE rc0.season_id = s.id
+                  AND NOT EXISTS (SELECT 1 FROM results r0 WHERE r0.race_id = rc0.id)
+            )
+        )
+    )
+    GROUP BY s.id, s.name, d.id, d.name, d.photo_path, d.nationality, t.name, t.color
     HAVING total_pts > 0
-    ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
+    ORDER BY s.id DESC, total_pts DESC, wins DESC
 ")->fetchAll();
 
 // Pro Saison nur den Ersten behalten
@@ -140,19 +150,30 @@ foreach ($driverChampions as $row) {
 
 // Team-Champion: höchste Gesamtpunkte aller Fahrer eines Teams pro Saison
 $teamChampions = $db->query("
-    SELECT s.id AS sid, s.name AS season_name, s.year,
+    SELECT s.id AS sid, s.name AS season_name,
            t.id AS team_id, t.name AS team_name, t.color AS team_color, t.logo_path,
            COALESCE(SUM({$bsql}), 0) AS total_pts,
            COUNT(CASE WHEN re.position=1 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS wins
     FROM seasons s
-    JOIN teams t ON t.season_id = s.id
+    JOIN team_seasons tsx ON tsx.season_id = s.id
+    JOIN teams t ON t.id = tsx.team_id
     LEFT JOIN season_entries se ON se.team_id = t.id AND se.season_id = s.id AND se.is_reserve = 0
     LEFT JOIN result_entries re ON re.driver_id = se.driver_id
         AND re.result_id IN (SELECT r.id FROM results r JOIN races rc ON rc.id=r.race_id WHERE rc.season_id=s.id)
-    WHERE s.is_active = 0
-    GROUP BY s.id, s.name, s.year, t.id, t.name, t.color, t.logo_path
+    WHERE (
+        s.is_active = 0
+        OR (
+            EXISTS (SELECT 1 FROM races rc0 WHERE rc0.season_id = s.id)
+            AND NOT EXISTS (
+                SELECT 1 FROM races rc0
+                WHERE rc0.season_id = s.id
+                  AND NOT EXISTS (SELECT 1 FROM results r0 WHERE r0.race_id = rc0.id)
+            )
+        )
+    )
+    GROUP BY s.id, s.name, t.id, t.name, t.color, t.logo_path
     HAVING total_pts > 0
-    ORDER BY s.year DESC, s.id DESC, total_pts DESC, wins DESC
+    ORDER BY s.id DESC, total_pts DESC, wins DESC
 ")->fetchAll();
 
 $teamChampBySeason = [];
@@ -232,7 +253,6 @@ foreach ($driversBySeason as $sid => $dRows) {
         $champSeasons[$sid] = [
             'sid'    => $sid,
             'name'   => $bestDriver['season_name'],
-            'year'   => $bestDriver['year'],
             'driver' => $bestDriver,
             'team'   => $bestTeam,
         ];
@@ -272,7 +292,7 @@ function hofRankColor(int $rank): string {
       <select name="season" class="form-control" onchange="this.form.submit()" style="background:var(--bg2);color:var(--text);border-color:var(--border);padding:8px 12px;border-radius:4px">
         <option value="0">Alle Saisons</option>
         <?php foreach ($seasons as $s): ?>
-        <option value="<?= $s['id'] ?>" <?= $s['id']==$filterSid?'selected':'' ?>><?= h($s['name']) ?> <?= h($s['year']??'') ?></option>
+        <option value="<?= $s['id'] ?>" <?= $s['id']==$filterSid?'selected':'' ?>><?= h($s['name']) ?></option>
         <?php endforeach; ?>
       </select>
     </form>
@@ -303,7 +323,6 @@ function hofRankColor(int $rank): string {
             <tr>
               <td>
                 <span style="font-family:var(--font-display);font-weight:900;font-size:1rem"><?= h($cs['name']) ?></span>
-                <?php if($cs['year']): ?><div class="text-muted" style="font-size:.78rem"><?= h($cs['year']) ?></div><?php endif; ?>
               </td>
               <td>
                 <div style="display:flex;align-items:center;gap:10px">

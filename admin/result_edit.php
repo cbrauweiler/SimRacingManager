@@ -74,7 +74,7 @@ $entries->execute([$resultId]); $entries=$entries->fetchAll();
 $seasonDrivers = $db->prepare("SELECT d.id,d.name,se.number,t.name AS team_name FROM season_entries se JOIN drivers d ON d.id=se.driver_id LEFT JOIN teams t ON t.id=se.team_id WHERE se.season_id=? ORDER BY se.number,d.name");
 $seasonDrivers->execute([$result['season_id']]); $seasonDrivers=$seasonDrivers->fetchAll();
 
-$seasonTeams = $db->prepare("SELECT id,name FROM teams WHERE season_id=? ORDER BY name");
+$seasonTeams = $db->prepare("SELECT t.id,t.name FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name");
 $seasonTeams->execute([$result['season_id']]); $seasonTeams=$seasonTeams->fetchAll();
 
 require_once __DIR__ . '/includes/layout.php';

@@ -63,7 +63,7 @@ if (isset($_GET['edit'])) {
 $drivers = $db->query("
     SELECT d.*,
            COUNT(DISTINCT se.season_id) AS season_count,
-           GROUP_CONCAT(DISTINCT s.name ORDER BY s.year DESC SEPARATOR ', ') AS seasons_list
+           GROUP_CONCAT(DISTINCT s.name ORDER BY s.id DESC SEPARATOR ', ') AS seasons_list
     FROM drivers d
     LEFT JOIN season_entries se ON se.driver_id = d.id
     LEFT JOIN seasons s ON s.id = se.season_id

@@ -32,6 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: '.SITE_URL.'/admin/calendar.php?season='.(int)$_POST['season_id']); exit;
         }
 
+        $durationType = in_array($_POST['duration_type'] ?? 'laps', ['laps','minutes'], true) ? $_POST['duration_type'] : 'laps';
+
         $data = [
             (int)$_POST['season_id'],
             $trackId,
@@ -42,14 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['race_date'] ?: null,
             $_POST['race_time'] ?: null,
             (int)($_POST['laps'] ?? 0) ?: null,
+            $durationType,
             trim($_POST['notes'] ?? ''),
         ];
 
         if ($id) {
-            $db->prepare("UPDATE races SET season_id=?,track_id=?,round=?,track_name=?,location=?,country=?,race_date=?,race_time=?,laps=?,notes=? WHERE id=?")
+            $db->prepare("UPDATE races SET season_id=?,track_id=?,round=?,track_name=?,location=?,country=?,race_date=?,race_time=?,laps=?,duration_type=?,notes=? WHERE id=?")
                ->execute([...$data, $id]);
         } else {
-            $db->prepare("INSERT INTO races (season_id,track_id,round,track_name,location,country,race_date,race_time,laps,notes) VALUES (?,?,?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO races (season_id,track_id,round,track_name,location,country,race_date,race_time,laps,duration_type,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
                ->execute($data);
         }
         auditLog('race_save', 'races', $id, $trackName);
@@ -65,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s) => $s['is_active']))[0] ?? ($seasons[0] ?? null);
 $seasonId = (int)($_GET['season'] ?? ($activeSeason['id'] ?? 0));
 
@@ -95,6 +98,18 @@ if ($seasonId) {
 // Alle angelegten Strecken für Dropdown
 $tracks = $db->query("SELECT * FROM tracks ORDER BY name ASC")->fetchAll();
 
+// Vorbelegung beim Anlegen eines neuen Rennens (Punkt 5):
+// Datum = letztes Rennen + 7 Tage, Uhrzeit = Standard-Rennstart aus den Einstellungen
+$prefillDate = '';
+$prefillTime = substr(getSetting('default_race_time', ''), 0, 5);
+if (!$editing && $races) {
+    $lastDate = null;
+    foreach ($races as $r) {
+        if (!empty($r['race_date']) && (!$lastDate || $r['race_date'] > $lastDate)) $lastDate = $r['race_date'];
+    }
+    if ($lastDate) $prefillDate = date('Y-m-d', strtotime($lastDate . ' +7 days'));
+}
+
 require_once __DIR__ . '/includes/layout.php';
 ?>
 
@@ -107,7 +122,7 @@ require_once __DIR__ . '/includes/layout.php';
   <?php foreach ($seasons as $s): ?>
   <a href="?season=<?= $s['id'] ?>"
      class="btn btn-sm <?= $s['id']==$seasonId ? 'btn-primary' : 'btn-secondary' ?>">
-    <?= h($s['name']) ?> <?= h($s['year']??'') ?><?= $s['is_active'] ? ' ★' : '' ?>
+    <?= h($s['name']) ?><?= $s['is_active'] ? ' ★' : '' ?>
   </a>
   <?php endforeach; ?>
 </div>
@@ -134,7 +149,7 @@ require_once __DIR__ . '/includes/layout.php';
           <select name="season_id" class="form-control" required>
             <?php foreach ($seasons as $s): ?>
               <option value="<?= $s['id'] ?>" <?= $s['id']==$seasonId ? 'selected' : '' ?>>
-                <?= h($s['name']) ?> <?= h($s['year']??'') ?>
+                <?= h($s['name']) ?>
               </option>
             <?php endforeach; ?>
           </select>
@@ -147,9 +162,16 @@ require_once __DIR__ . '/includes/layout.php';
                    value="<?= $editing ? (int)$editing['round'] : count($races)+1 ?>" min="1"/>
           </div>
           <div class="form-group">
-            <label>Runden (Rennen)</label>
-            <input type="number" name="laps" class="form-control"
-                   value="<?= $editing ? (int)$editing['laps'] : '' ?>" placeholder="z.B. 30"/>
+            <label>Renndauer</label>
+            <div style="display:flex;gap:6px">
+              <input type="number" name="laps" class="form-control" style="flex:1" min="1"
+                     value="<?= $editing ? (int)$editing['laps'] : '' ?>" placeholder="z.B. 30"/>
+              <?php $durType = $editing['duration_type'] ?? 'laps'; ?>
+              <select name="duration_type" class="form-control" style="max-width:120px">
+                <option value="laps" <?= $durType==='laps'?'selected':'' ?>>Runden</option>
+                <option value="minutes" <?= $durType==='minutes'?'selected':'' ?>>Minuten</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -222,12 +244,12 @@ require_once __DIR__ . '/includes/layout.php';
           <div class="form-group">
             <label>Datum</label>
             <input type="date" name="race_date" class="form-control"
-                   value="<?= h($editing['race_date'] ?? '') ?>"/>
+                   value="<?= h($editing['race_date'] ?? $prefillDate) ?>"/>
           </div>
           <div class="form-group">
             <label>Uhrzeit</label>
             <input type="time" name="race_time" class="form-control"
-                   value="<?= h(substr($editing['race_time'] ?? '', 0, 5)) ?>"/>
+                   value="<?= h($editing ? substr($editing['race_time'] ?? '', 0, 5) : $prefillTime) ?>"/>
           </div>
         </div>
 
@@ -258,7 +280,7 @@ require_once __DIR__ . '/includes/layout.php';
         Kalender:
         <?php
         $idx = array_search($seasonId, array_column($seasons, 'id'));
-        echo $idx !== false ? h($seasons[$idx]['name'].' '.($seasons[$idx]['year']??'')) : 'Alle';
+        echo $idx !== false ? h($seasons[$idx]['name']) : 'Alle';
         ?>
       </h3>
       <span class="badge badge-muted"><?= count($races) ?> Rennen</span>

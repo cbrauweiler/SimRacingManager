@@ -5,7 +5,7 @@ $adminTitle = 'Grafik Export'; $adminPage = 'export';
 $db = getDB();
 
 requireRole('editor');
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC, id DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s)=>$s['is_active']))[0] ?? ($seasons[0]??null);
 $sid = $activeSeason['id'] ?? 0;
 
@@ -51,7 +51,7 @@ require_once __DIR__ . '/includes/layout.php';
         <select id="s-season" class="form-control" onchange="upd()">
           <?php foreach($seasons as $s): ?>
           <option value="<?= $s['id'] ?>" <?= $s['id']==$sid?'selected':'' ?>>
-            <?= h($s['name']) ?> <?= h($s['year']??'') ?><?= $s['is_active']?' ★':'' ?>
+            <?= h($s['name']) ?><?= $s['is_active']?' ★':'' ?>
           </option>
           <?php endforeach; ?>
         </select>

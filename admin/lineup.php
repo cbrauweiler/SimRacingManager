@@ -6,7 +6,7 @@ $adminTitle = 'Saison-Lineup'; $adminPage = 'lineup';
 $db = getDB();
 
 // Aktive oder gewählte Saison
-$seasons = $db->query("SELECT * FROM seasons ORDER BY year DESC, id DESC")->fetchAll();
+$seasons = $db->query("SELECT * FROM seasons ORDER BY id DESC")->fetchAll();
 $activeSeason = array_values(array_filter($seasons, fn($s) => $s['is_active']))[0] ?? ($seasons[0] ?? null);
 $selectedSeasonId = (int)($_GET['season'] ?? ($activeSeason['id'] ?? 0));
 $selectedSeason = null;
@@ -80,21 +80,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $toSeasonId   = (int)$_POST['to_season_id'];
 
         // Teams der Quellsaison holen
-        $oldTeams = $db->prepare("SELECT * FROM teams WHERE season_id=?");
+        $oldTeams = $db->prepare("SELECT t.* FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=?");
         $oldTeams->execute([$fromSeasonId]);
-        $teamMap = []; // old_id => new_id
+        $teamMap = []; // old_id => team_id (in Zielsaison)
+        $linkTeam = $db->prepare("INSERT IGNORE INTO team_seasons (team_id, season_id) VALUES (?,?)");
         foreach ($oldTeams->fetchAll() as $ot) {
-            // Team in Zielsaison anlegen (falls noch nicht vorhanden)
-            $exists = $db->prepare("SELECT id FROM teams WHERE season_id=? AND name=?");
+            // Bereits ein gleichnamiges Team in der Zielsaison? → darauf mappen
+            $exists = $db->prepare("SELECT t.id FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? AND t.name=?");
             $exists->execute([$toSeasonId, $ot['name']]);
             $existingTeam = $exists->fetch();
             if ($existingTeam) {
                 $teamMap[$ot['id']] = $existingTeam['id'];
             } else {
-                $db->prepare("INSERT INTO teams (season_id,name,abbreviation,color,logo_path,car,nationality) VALUES (?,?,?,?,?,?,?)")
-                   ->execute([$toSeasonId,$ot['name'],$ot['abbreviation'],$ot['color'],$ot['logo_path'],$ot['car'],$ot['nationality']]);
-                $newTeamId = (int)$db->lastInsertId();
-                $teamMap[$ot['id']] = $newTeamId;
+                // Dasselbe Team auch in der Zielsaison melden (n:m, kein Klon)
+                $linkTeam->execute([$ot['id'], $toSeasonId]);
+                $teamMap[$ot['id']] = $ot['id'];
             }
         }
 
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         auditLog('lineup_copy', 'season_entries', $toSeasonId, "Copied from season $fromSeasonId: $copied entries");
-        $_SESSION['flash'] = ['type'=>'success','msg'=>"✅ $copied Einträge aus der Vorjahressaison übernommen (Teams wurden neu angelegt)!"];
+        $_SESSION['flash'] = ['type'=>'success','msg'=>"✅ $copied Einträge aus der Vorjahressaison übernommen (Teams wurden in die Saison übernommen)!"];
         header('Location: '.SITE_URL.'/admin/lineup.php?season='.$toSeasonId); exit;
     }
 }
@@ -139,7 +139,7 @@ if ($selectedSeasonId) {
 // Teams der aktuell gewählten Saison
 $teamsInSeason = [];
 if ($selectedSeasonId) {
-    $stmt = $db->prepare("SELECT * FROM teams WHERE season_id=? ORDER BY name");
+    $stmt = $db->prepare("SELECT t.* FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name");
     $stmt->execute([$selectedSeasonId]);
     $teamsInSeason = $stmt->fetchAll();
 }
@@ -172,7 +172,7 @@ require_once __DIR__ . '/includes/layout.php';
   <?php foreach($seasons as $s): ?>
     <a href="?season=<?= $s['id'] ?>"
        class="btn btn-sm <?= $s['id']==$selectedSeasonId ? 'btn-primary' : 'btn-secondary' ?>">
-      <?= h($s['name']) ?> <?= h($s['year']??'') ?>
+      <?= h($s['name']) ?>
       <?php if($s['is_active']): ?> ★<?php endif; ?>
     </a>
   <?php endforeach; ?>
@@ -188,7 +188,7 @@ require_once __DIR__ . '/includes/layout.php';
   <div>
     <div class="card mb-3">
       <div class="card-header">
-        <h3>📋 Lineup: <?= h($selectedSeason['name']) ?> <?= h($selectedSeason['year']??'') ?></h3>
+        <h3>📋 Lineup: <?= h($selectedSeason['name']) ?></h3>
         <span class="badge <?= $selectedSeason['is_active'] ? 'badge-primary' : 'badge-muted' ?>">
           <?= count($lineupEntries) ?> Fahrer
         </span>
@@ -287,7 +287,7 @@ require_once __DIR__ . '/includes/layout.php';
           <select name="from_season_id" class="form-control" required>
             <option value="">– Saison wählen –</option>
             <?php foreach($otherSeasons as $s): ?>
-              <option value="<?= $s['id'] ?>"><?= h($s['name']) ?> <?= h($s['year']??'') ?></option>
+              <option value="<?= $s['id'] ?>"><?= h($s['name']) ?></option>
             <?php endforeach; ?>
           </select>
           <button type="submit" class="btn btn-secondary" onclick="return confirm('Lineup aus gewählter Saison übernehmen?')">📋 Übernehmen</button>

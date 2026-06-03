@@ -57,7 +57,8 @@ INSERT INTO `settings` (`key`, `value`) VALUES
 ('discord_bot_channel',       ''),
 ('discord_bot_port',          '3001'),
 ('discord_bot_enabled',       '0'),
-('discord_signup_hours',      '2')
+('discord_signup_hours',      '2'),
+('default_race_time',          '')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 
 -- -------------------------------------------------------
@@ -106,7 +107,6 @@ CREATE TABLE IF NOT EXISTS `news` (
 CREATE TABLE IF NOT EXISTS `seasons` (
   `id`          INT AUTO_INCREMENT PRIMARY KEY,
   `name`        VARCHAR(150) NOT NULL,
-  `year`        YEAR,
   `game`        VARCHAR(150),
   `car_class`   VARCHAR(150),
   `description` TEXT,
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS `drivers` (
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `teams` (
   `id`           INT AUTO_INCREMENT PRIMARY KEY,
-  `season_id`    INT NOT NULL,
+  `season_id`    INT NULL,
   `name`         VARCHAR(150) NOT NULL,
   `abbreviation` VARCHAR(10),
   `color`        VARCHAR(7) DEFAULT '#e8333a',
@@ -139,6 +139,17 @@ CREATE TABLE IF NOT EXISTS `teams` (
   `car`          VARCHAR(150),
   `nationality`  VARCHAR(100),
   `created_at`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`season_id`) REFERENCES `seasons`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -------------------------------------------------------
+-- Team ↔ Saison (n:m – ein Team kann in mehreren Saisons gemeldet sein)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `team_seasons` (
+  `team_id`   INT NOT NULL,
+  `season_id` INT NOT NULL,
+  PRIMARY KEY (`team_id`,`season_id`),
+  FOREIGN KEY (`team_id`)   REFERENCES `teams`(`id`)   ON DELETE CASCADE,
   FOREIGN KEY (`season_id`) REFERENCES `seasons`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -192,6 +203,7 @@ CREATE TABLE IF NOT EXISTS `races` (
   `race_date`      DATE,
   `race_time`      TIME,
   `laps`           SMALLINT UNSIGNED,
+  `duration_type`  ENUM('laps','minutes') NOT NULL DEFAULT 'laps',
   `notes`          TEXT,
   `discord_posted` TINYINT(1) DEFAULT 0,
   `created_at`     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -399,3 +411,39 @@ ALTER TABLE `discord_events`
 -- Migration: display_name für Race Signups
 ALTER TABLE `race_signups`
   ADD COLUMN IF NOT EXISTS `display_name` VARCHAR(100) NULL DEFAULT NULL;
+
+-- ============================================================
+-- Migrationen v1.8.0
+-- ============================================================
+
+-- Punkt 1: Saison ohne Jahreszahl – Jahr-Spalte entfernen
+ALTER TABLE `seasons`
+  DROP COLUMN IF EXISTS `year`;
+
+-- Punkt 2/6: Renndauer kann Runden ODER Minuten sein
+ALTER TABLE `races`
+  ADD COLUMN IF NOT EXISTS `duration_type` ENUM('laps','minutes') NOT NULL DEFAULT 'laps';
+
+-- Punkt 5: Standard-Rennstartzeit für die Kalender-Anlage
+INSERT INTO `settings` (`key`, `value`) VALUES
+('default_race_time', '')
+ON DUPLICATE KEY UPDATE `value` = `value`;
+
+-- Punkt 7: Teams n:m – Team kann in mehreren Saisons gemeldet sein
+CREATE TABLE IF NOT EXISTS `team_seasons` (
+  `team_id`   INT NOT NULL,
+  `season_id` INT NOT NULL,
+  PRIMARY KEY (`team_id`,`season_id`),
+  FOREIGN KEY (`team_id`)   REFERENCES `teams`(`id`)   ON DELETE CASCADE,
+  FOREIGN KEY (`season_id`) REFERENCES `seasons`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IF NOT EXISTS idx_team_seasons_season ON `team_seasons`(`season_id`);
+
+-- teams.season_id wird zur Legacy-Spalte (nicht mehr für Filter genutzt)
+ALTER TABLE `teams`
+  MODIFY `season_id` INT NULL;
+
+-- Bestehende 1:1-Zuordnungen in die Junction-Tabelle übernehmen
+INSERT IGNORE INTO `team_seasons` (`team_id`, `season_id`)
+  SELECT `id`, `season_id` FROM `teams` WHERE `season_id` IS NOT NULL;

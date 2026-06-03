@@ -168,7 +168,7 @@ if ($sid) {
     $lstmt->execute([$sid]);
     $lineupDrivers = $lstmt->fetchAll();
 
-    $tstmt = $db->prepare("SELECT id,name,color FROM teams WHERE season_id=? ORDER BY name");
+    $tstmt = $db->prepare("SELECT t.id,t.name,t.color FROM teams t JOIN team_seasons ts ON ts.team_id=t.id WHERE ts.season_id=? ORDER BY t.name");
     $tstmt->execute([$sid]);
     $lineupTeams = $tstmt->fetchAll();
 }

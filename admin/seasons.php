@@ -10,11 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
         $id   = (int)($_POST['id'] ?? 0);
-        $data = [trim($_POST['name']??''), (int)($_POST['year']??0) ?: null, trim($_POST['game']??''), trim($_POST['car_class']??''), trim($_POST['description']??''), isset($_POST['is_active'])?1:0];
+        $data = [trim($_POST['name']??''), trim($_POST['game']??''), trim($_POST['car_class']??''), trim($_POST['description']??''), isset($_POST['is_active'])?1:0];
         if ($id) {
-            $db->prepare("UPDATE seasons SET name=?,year=?,game=?,car_class=?,description=?,is_active=? WHERE id=?")->execute([...$data,$id]);
+            $db->prepare("UPDATE seasons SET name=?,game=?,car_class=?,description=?,is_active=? WHERE id=?")->execute([...$data,$id]);
         } else {
-            $db->prepare("INSERT INTO seasons (name,year,game,car_class,description,is_active) VALUES (?,?,?,?,?,?)")->execute($data);
+            $db->prepare("INSERT INTO seasons (name,game,car_class,description,is_active) VALUES (?,?,?,?,?)")->execute($data);
         }
         $_SESSION['flash']=['type'=>'success','msg'=>'✅ Saison gespeichert!'];
         header('Location: '.SITE_URL.'/admin/seasons.php'); exit;
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 $editing = null;
 if (isset($_GET['edit'])) { $stmt=$db->prepare("SELECT * FROM seasons WHERE id=?"); $stmt->execute([(int)$_GET['edit']]); $editing=$stmt->fetch(); }
-$seasons = $db->query("SELECT s.*,(SELECT COUNT(*) FROM teams t WHERE t.season_id=s.id) tc,(SELECT COUNT(*) FROM races r WHERE r.season_id=s.id) rc FROM seasons s ORDER BY year DESC, id DESC")->fetchAll();
+$seasons = $db->query("SELECT s.*,(SELECT COUNT(*) FROM team_seasons ts WHERE ts.season_id=s.id) tc,(SELECT COUNT(*) FROM races r WHERE r.season_id=s.id) rc FROM seasons s ORDER BY id DESC")->fetchAll();
 require_once __DIR__ . '/includes/layout.php';
 ?>
 <div class="admin-page-title">Saisons <span style="color:var(--primary)">verwalten</span></div>
@@ -47,10 +47,7 @@ require_once __DIR__ . '/includes/layout.php';
     <form method="post">
       <input type="hidden" name="action" value="save"/>
       <input type="hidden" name="id" value="<?= $editing?(int)$editing['id']:0 ?>"/>
-      <div class="form-row cols-2">
-        <div class="form-group"><label>Name *</label><input type="text" name="name" class="form-control" value="<?= h($editing['name']??'') ?>" required placeholder="Saison 1, GT3 Cup 2025..."/></div>
-        <div class="form-group"><label>Jahr</label><input type="number" name="year" class="form-control" value="<?= h($editing['year']??date('Y')) ?>" placeholder="<?= date('Y') ?>"/></div>
-      </div>
+      <div class="form-group"><label>Name *</label><input type="text" name="name" class="form-control" value="<?= h($editing['name']??'') ?>" required placeholder="Saison 1, GT3 Cup..."/></div>
       <div class="form-row cols-2">
         <div class="form-group"><label>Spiel / Simulator</label><input type="text" name="game" class="form-control" value="<?= h($editing['game']??'') ?>" placeholder="Assetto Corsa, iRacing, rFactor 2..."/></div>
         <div class="form-group"><label>Fahrzeugklasse</label><input type="text" name="car_class" class="form-control" value="<?= h($editing['car_class']??'') ?>" placeholder="GT3, GT4, Formula..."/></div>
@@ -69,12 +66,11 @@ require_once __DIR__ . '/includes/layout.php';
   <div class="card-body" style="padding:0">
     <?php if ($seasons): ?>
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Jahr</th><th>Spiel</th><th>Teams</th><th>Rennen</th><th>Status</th><th style="text-align:right">Aktionen</th></tr></thead>
+      <thead><tr><th>Name</th><th>Spiel</th><th>Teams</th><th>Rennen</th><th>Status</th><th style="text-align:right">Aktionen</th></tr></thead>
       <tbody>
         <?php foreach ($seasons as $s): ?>
         <tr>
           <td><strong><?= h($s['name']) ?></strong></td>
-          <td><?= $s['year'] ?: '–' ?></td>
           <td class="text-muted"><?= h($s['game']??'–') ?></td>
           <td><?= $s['tc'] ?></td>
           <td><?= $s['rc'] ?></td>

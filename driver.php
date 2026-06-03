@@ -50,12 +50,12 @@ $showRatings   = getSetting('rating_show_public','1') === '1';
 if ($showRatings && $activeSeason) {
     $currentRating = getDriverRating($db, $driverId, $activeSeason['id']);
 
-    // Vorherige Saison: höchste inaktive Saison nach Jahr/ID
+    // Vorherige Saison: höchste inaktive Saison nach ID
     $prevSeason = $db->prepare("
         SELECT s.* FROM seasons s
         JOIN driver_ratings dr ON dr.season_id = s.id AND dr.driver_id = ?
         WHERE s.is_active = 0
-        ORDER BY s.year DESC, s.id DESC LIMIT 1
+        ORDER BY s.id DESC LIMIT 1
     ");
     $prevSeason->execute([$driverId]);
     $prevSeasonRow = $prevSeason->fetch();
