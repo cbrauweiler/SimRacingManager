@@ -34,7 +34,7 @@ ServerSignature Off
 
 # Protect config files
 <FilesMatch "^config\.inc\.php$">
-    Deny from all
+    Require all denied
 </FilesMatch>
 
 # Gzip compression
