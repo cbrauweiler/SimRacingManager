@@ -33,6 +33,48 @@ function versionNewer(string $remote, string $local): bool {
     return version_compare($r, $l, '>');
 }
 
+/**
+ * Zerlegt ein SQL-Skript in einzelne Statements. Berücksichtigt
+ * String-/Bezeichner-Quotes ('…', "…", `…`) und entfernt Zeilen- (-- , #)
+ * sowie Block-Kommentare, damit Semikolons innerhalb von Literalen nicht
+ * fälschlich als Trenner gewertet werden. Liefert nicht-leere, getrimmte
+ * Statements – funktioniert für CREATE/ALTER/INSERT gleichermaßen.
+ *
+ * @return string[]
+ */
+function splitSqlStatements(string $sql): array {
+    $statements = [];
+    $buf   = '';
+    $len   = strlen($sql);
+    $quote = '';   // aktuelles Quote-Zeichen oder ''
+    for ($i = 0; $i < $len; $i++) {
+        $ch   = $sql[$i];
+        $next = $i + 1 < $len ? $sql[$i + 1] : '';
+
+        if ($quote !== '') {
+            $buf .= $ch;
+            // Escape innerhalb von '…' bzw. "…" überspringen
+            if ($ch === '\\' && ($quote === "'" || $quote === '"')) { $buf .= $next; $i++; continue; }
+            if ($ch === $quote) $quote = '';
+            continue;
+        }
+
+        // Kommentare außerhalb von Quotes überspringen
+        if ($ch === '-' && $next === '-') { while ($i < $len && $sql[$i] !== "\n") $i++; continue; }
+        if ($ch === '#')                  { while ($i < $len && $sql[$i] !== "\n") $i++; continue; }
+        if ($ch === '/' && $next === '*') { $i += 2; while ($i < $len && !($sql[$i] === '*' && ($sql[$i + 1] ?? '') === '/')) $i++; $i++; continue; }
+
+        if ($ch === "'" || $ch === '"' || $ch === '`') { $quote = $ch; $buf .= $ch; continue; }
+
+        if ($ch === ';') { $t = trim($buf); if ($t !== '') $statements[] = $t; $buf = ''; continue; }
+
+        $buf .= $ch;
+    }
+    $t = trim($buf);
+    if ($t !== '') $statements[] = $t;
+    return $statements;
+}
+
 // ============================================================
 // POST: Update durchführen
 // ============================================================
@@ -116,32 +158,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    // 4. DB-Migrationen ausführen (falls vorhanden)
-                    $migrationFile = $srcDir . 'install.sql';
-                    if (file_exists($migrationFile)) {
+                    // 4. DB-Migrationen ausführen (aus migrations/-Ordner)
+                    //    Es werden ALLE Statement-Typen (CREATE/ALTER/INSERT)
+                    //    ausgeführt; die Migrationsdateien sind idempotent
+                    //    (IF [NOT] EXISTS / ON DUPLICATE / INSERT IGNORE).
+                    //    Bereits angewandte Dateien werden in `schema_migrations`
+                    //    vermerkt und übersprungen.
+                    $migDir   = $srcDir . 'migrations/';
+                    $migFiles = is_dir($migDir) ? (glob($migDir . '*.sql') ?: []) : [];
+                    // natürliche Sortierung: v1.7.5 < v1.8.0 < v1.10.0
+                    usort($migFiles, fn($a, $b) => strnatcasecmp(basename($a), basename($b)));
+
+                    if ($migFiles) {
                         try {
                             $db = getDB();
-                            $sql = file_get_contents($migrationFile);
-                            // Nur ALTER TABLE und INSERT ... ON DUPLICATE ausführen (keine DROP/CREATE)
-                            $lines = explode("\n", $sql);
-                            $stmt = '';
-                            $migCount = 0;
-                            foreach ($lines as $line) {
-                                $trimmed = ltrim($line);
-                                // Nur sichere Statements
-                                if (preg_match('/^(ALTER TABLE|INSERT INTO.*ON DUPLICATE)/i', $trimmed)) {
-                                    $stmt .= $line . "\n";
-                                } elseif ($stmt && str_contains($line, ';')) {
-                                    $stmt .= $line . "\n";
-                                    try { $db->exec($stmt); $migCount++; } catch (\Throwable $e) { /* Spalte existiert schon etc. */ }
-                                    $stmt = '';
-                                } elseif ($stmt) {
-                                    $stmt .= $line . "\n";
+                            // Tracking-Tabelle für bereits angewandte Migrationen
+                            $db->exec("CREATE TABLE IF NOT EXISTS `schema_migrations` (
+                                `filename`   VARCHAR(190) NOT NULL PRIMARY KEY,
+                                `applied_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                            $done = array_flip(
+                                $db->query("SELECT `filename` FROM `schema_migrations`")->fetchAll(PDO::FETCH_COLUMN)
+                            );
+
+                            $applied = 0;
+                            foreach ($migFiles as $file) {
+                                $name = basename($file);
+                                if (isset($done[$name])) continue;          // schon angewandt
+
+                                $sql = file_get_contents($file);
+                                if ($sql === false) continue;
+
+                                $ok = 0;
+                                foreach (splitSqlStatements($sql) as $statement) {
+                                    try { $db->exec($statement); $ok++; }
+                                    catch (\Throwable $e) {
+                                        // "existiert bereits" o. Ä. ist bei idempotenten
+                                        // Migrationen unkritisch – nur protokollieren.
+                                        $updateLog[] = '⚠️ ' . $name . ': ' . $e->getMessage();
+                                    }
                                 }
+                                $db->prepare("INSERT IGNORE INTO `schema_migrations` (`filename`) VALUES (?)")
+                                   ->execute([$name]);
+                                $updateLog[] = "🗄️ Migration {$name}: {$ok} Statement(s) ausgeführt";
+                                $applied++;
                             }
-                            if ($migCount) $updateLog[] = "🗄️ {$migCount} DB-Migration(en) ausgeführt";
+                            if (!$applied) $updateLog[] = '🗄️ Datenbank bereits aktuell – keine neuen Migrationen.';
                         } catch (\Throwable $e) {
-                            $updateLog[] = '⚠️ DB-Migration übersprungen: ' . $e->getMessage();
+                            $updateError = 'DB-Migration fehlgeschlagen: ' . $e->getMessage()
+                                         . ' – Bitte migrations/*.sql manuell über phpMyAdmin einspielen.';
                         }
                     }
 

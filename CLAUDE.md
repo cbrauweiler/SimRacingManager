@@ -1,6 +1,6 @@
 # SimRace Manager – Die Liga-Plattform für Simracing-Communities
 
-**Version 1.8.0 · Open Source · PHP / MySQL**
+**Version 1.8.1 · Open Source · PHP / MySQL**
 
 ---
 
