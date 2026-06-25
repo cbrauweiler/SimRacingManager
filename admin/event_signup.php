@@ -199,8 +199,7 @@ if ($tablesExist) {
     $events = $db->query("
         SELECT de.*, rc.track_name, rc.round, rc.race_date, rc.race_time, s.name AS season_name,
                (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='accepted')  AS cnt_yes,
-               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='declined')  AS cnt_no,
-               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='maybe')     AS cnt_maybe
+               (SELECT COUNT(*) FROM race_signups WHERE event_id=de.id AND status='declined')  AS cnt_no
         FROM discord_events de
         JOIN races rc ON rc.id=de.race_id
         JOIN seasons s ON s.id=rc.season_id
@@ -370,7 +369,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
             <label>Fahrer pro Spalte</label>
             <input type="number" name="signup_cols" class="form-control"
                    value="<?= h(getSetting('discord_signup_cols','10')) ?>" min="3" max="25" style="max-width:100px"/>
-            <div class="form-hint">Für Zusagen/Absagen/Vielleicht</div>
+            <div class="form-hint">Für Zusagen/Absagen</div>
           </div>
         </div>
 
@@ -461,7 +460,6 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
         <div class="flex gap-3" style="font-size:.85rem;margin-top:6px">
           <span style="color:#4cffb0">✅ <?= (int)$ev['cnt_yes'] ?></span>
           <span style="color:#ff8080">❌ <?= (int)$ev['cnt_no'] ?></span>
-          <span style="color:#f5a623">❓ <?= (int)$ev['cnt_maybe'] ?></span>
         </div>
         <?php if (!$ev['is_closed']): ?>
           <?php if ($ev['response_deadline']): ?>
@@ -481,7 +479,7 @@ CREATE TABLE IF NOT EXISTS `discord_events` (
         $sups->execute([$ev['id']]); $sups = $sups->fetchAll();
         ?>
         <div id="signup-detail-<?= $ev['id'] ?>" style="display:none;margin-top:8px">
-          <?php foreach (['accepted'=>['✅','#4cffb0'],'declined'=>['❌','#ff8080'],'maybe'=>['❓','#f5a623']] as $st=>[$ico,$col]):
+          <?php foreach (['accepted'=>['✅','#4cffb0'],'declined'=>['❌','#ff8080']] as $st=>[$ico,$col]):
             $filtered = array_filter($sups, fn($s)=>$s['status']===$st);
             if ($filtered): ?>
           <div style="margin-top:4px">

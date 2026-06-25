@@ -1,6 +1,6 @@
 # SimRace Manager – Die Liga-Plattform für Simracing-Communities
 
-**Version 1.8.2 · Open Source · PHP / MySQL**
+**Version 1.8.3 · Open Source · PHP / MySQL**
 
 ---
 
@@ -50,7 +50,7 @@ Das Backend ist rollenbasiert aufgebaut. Drei Rollen – Editor, Admin und Super
 
 Die tiefste Integration bietet der eingebaute **Discord Bot** – ein Node.js-Prozess der eng mit dem PHP-Backend kommuniziert.
 
-**Race Signup** – Der Admin postet über das Backend ein strukturiertes Anmeldeformular direkt in einen Discord-Kanal. Fahrer reagieren mit Buttons: Zusagen, Absagen oder Vielleicht. Das Embed aktualisiert sich bei jeder Reaktion in Echtzeit und zeigt Zeitplan, Wetterverlauf und die aktuelle Teilnehmerliste. Solange die Anmeldung offen ist, erscheint der Embed-Streifen grün; nach dem Schließen rot.
+**Race Signup** – Der Admin postet über das Backend ein strukturiertes Anmeldeformular direkt in einen Discord-Kanal. Fahrer reagieren mit Buttons: Zusagen oder Absagen. Das Embed aktualisiert sich bei jeder Reaktion in Echtzeit und zeigt Zeitplan, Wetterverlauf und die aktuelle Teilnehmerliste. Solange die Anmeldung offen ist, erscheint der Embed-Streifen grün; nach dem Schließen rot.
 
 **Zwei Fristen** – Eine Rückmeldefrist gibt an, bis wann Fahrer geantwortet haben sollten. Eine separate Anmeldeschluss-Frist sperrt danach weitere Änderungen. Nach Ablauf der Rückmeldefrist postet der Bot automatisch im zugehörigen Thread, welche Stammfahrer noch nicht geantwortet haben – basierend auf dem hinterlegten Discord-Account-Namen im Fahrerprofil.
 

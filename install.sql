@@ -324,7 +324,7 @@ CREATE TABLE IF NOT EXISTS `race_signups` (
   `race_id`          INT NOT NULL,
   `discord_user_id`  VARCHAR(30)  NOT NULL,
   `discord_username` VARCHAR(100) NOT NULL,
-  `status`           ENUM('accepted','declined','maybe') NOT NULL,
+  `status`           ENUM('accepted','declined') NOT NULL,
   `changed_at`       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_event_user` (`event_id`, `discord_user_id`),
   FOREIGN KEY (`event_id`) REFERENCES `discord_events`(`id`) ON DELETE CASCADE,

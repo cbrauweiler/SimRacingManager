@@ -25,13 +25,13 @@ $eventId       = (int)($body['event_id']   ?? 0);
 $discordUserId = $body['discord_user_id']  ?? '';
 $discordName   = $body['discord_username'] ?? '';
 $displayName   = $body['display_name']     ?? $discordName;
-$status        = $body['status']           ?? ''; // accepted|declined|maybe
+$status        = $body['status']           ?? ''; // accepted|declined
 
 $db = getDB();
 
 // ---- Aktion: Anmeldung speichern ----
 if ($action === 'signup') {
-    if (!$eventId || !$discordUserId || !in_array($status, ['accepted','declined','maybe'])) {
+    if (!$eventId || !$discordUserId || !in_array($status, ['accepted','declined'])) {
         http_response_code(400); echo json_encode(['error' => 'Missing params']); exit;
     }
 
@@ -61,8 +61,11 @@ if ($action === 'signup') {
     $signups = $db->prepare("SELECT * FROM race_signups WHERE event_id=? ORDER BY changed_at ASC");
     $signups->execute([$eventId]); $signups = $signups->fetchAll();
 
-    $lists = ['accepted'=>[], 'declined'=>[], 'maybe'=>[]];
-    foreach ($signups as $s) $lists[$s['status']][] = $s['display_name'] ?: $s['discord_username'];
+    $lists = ['accepted'=>[], 'declined'=>[]];
+    foreach ($signups as $s) {
+        if (!isset($lists[$s['status']])) continue; // Legacy-Status (z.B. 'maybe') ignorieren
+        $lists[$s['status']][] = $s['display_name'] ?: $s['discord_username'];
+    }
 
     echo json_encode([
         'success'    => true,

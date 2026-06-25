@@ -64,7 +64,6 @@ function formatTime(timeStr) {
 function buildEventMessage(data, lists, closed = false) {
     const accepted = lists.accepted || [];
     const declined = lists.declined || [];
-    const maybe    = lists.maybe    || [];
 
     const deadline = data.deadline
         ? new Date(data.deadline).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' Uhr'
@@ -96,7 +95,7 @@ function buildEventMessage(data, lists, closed = false) {
         descParts.push(data.extra_info.trim());
     }
 
-    // Teilnehmerlisten – immer 3 Spalten nebeneinander (Zusagen | Absagen | Vielleicht)
+    // Teilnehmerlisten – zwei Spalten nebeneinander (Zusagen | Absagen)
     // Discord-Feld-Limit: 1024 Zeichen pro Wert → bei sehr langen Listen abkürzen
     const fmtList = (arr, emptyMsg) => {
         if (!arr.length) return emptyMsg;
@@ -116,7 +115,6 @@ function buildEventMessage(data, lists, closed = false) {
     };
     const yesStr   = fmtList(accepted, '*Noch keine Zusagen*');
     const noStr    = fmtList(declined, '*Noch keine Absagen*');
-    const maybeStr = fmtList(maybe,    '*Noch keine Rückmeldung*');
 
     // Wetter: je Session ein inline Field mit Label + Emoji-Slots
     const wxFields = [];
@@ -150,7 +148,6 @@ function buildEventMessage(data, lists, closed = false) {
     fields.push(
         { name: `✅ Zusagen (${accepted.length})`,    value: yesStr,   inline: true },
         { name: `❌ Absagen (${declined.length})`,    value: noStr,    inline: true },
-        { name: `❓ Vielleicht (${maybe.length})`,    value: maybeStr, inline: true },
     );
 
     const embed = new EmbedBuilder()
@@ -179,12 +176,6 @@ function buildButtons(closed = false) {
             .setLabel('Absagen')
             .setEmoji('❌')
             .setStyle(ButtonStyle.Danger)
-            .setDisabled(closed),
-        new ButtonBuilder()
-            .setCustomId('signup_maybe')
-            .setLabel('Vielleicht')
-            .setEmoji('❓')
-            .setStyle(ButtonStyle.Secondary)
             .setDisabled(closed),
     );
 }
@@ -256,7 +247,6 @@ client.on('interactionCreate', async interaction => {
     const statusMap = {
         signup_accepted: 'accepted',
         signup_declined: 'declined',
-        signup_maybe:    'maybe',
     };
     const status = statusMap[customId];
     if (!status) return;
@@ -316,10 +306,10 @@ client.on('interactionCreate', async interaction => {
             if (ev.threadId) {
                 try {
                     const thread = await client.channels.fetch(ev.threadId);
-                    const statusLabels = { accepted:'✅ zugesagt', declined:'❌ abgesagt', maybe:'❓ Vielleicht' };
+                    const statusLabels = { accepted:'✅ zugesagt', declined:'❌ abgesagt' };
                     let logMsg = `**${displayName}** hat ${statusLabels[status]}`;
                     if (data.old_status && data.old_status !== status) {
-                        const oldLabels = { accepted:'Zusage', declined:'Absage', maybe:'Vielleicht' };
+                        const oldLabels = { accepted:'Zusage', declined:'Absage' };
                         logMsg = `**${displayName}** hat geändert: ${oldLabels[data.old_status]} → ${statusLabels[status]}`;
                     }
                     await thread.send(`\`${new Date().toLocaleTimeString('de-DE')}\` ${logMsg}`);
@@ -327,7 +317,7 @@ client.on('interactionCreate', async interaction => {
             }
 
             // Ephemeral-Bestätigung
-            const confirmLabels = { accepted:'✅ Du hast **zugesagt**!', declined:'❌ Du hast **abgesagt**.', maybe:'❓ Du hast mit **Vielleicht** geantwortet.' };
+            const confirmLabels = { accepted:'✅ Du hast **zugesagt**!', declined:'❌ Du hast **abgesagt**.' };
             await interaction.followUp({ content: confirmLabels[status], ephemeral: true });
         }
     } catch(e) {
@@ -486,7 +476,7 @@ app.post('/post-event', async (req, res) => {
         const channel = await client.channels.fetch(data.channel_id);
         if (!channel) return res.status(404).json({ error: 'Channel nicht gefunden' });
 
-        const embed   = buildEventMessage(data, { accepted:[], declined:[], maybe:[] });
+        const embed   = buildEventMessage(data, { accepted:[], declined:[] });
         const buttons = buildButtons(false);
         // Mention: @everyone/@here direkt, sonst als Rollen-ID
         let mentionContent = undefined;
