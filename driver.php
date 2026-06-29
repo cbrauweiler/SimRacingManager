@@ -28,15 +28,15 @@ $stats = $db->prepare("
     SELECT
         COUNT(DISTINCT re.result_id) AS starts,
         SUM(re.points) AS total_pts,
-        COUNT(CASE WHEN re.position=1 THEN 1 END) AS wins,
-        COUNT(CASE WHEN re.position=2 THEN 1 END) AS p2,
-        COUNT(CASE WHEN re.position=3 THEN 1 END) AS p3,
+        COUNT(CASE WHEN re.position=1 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS wins,
+        COUNT(CASE WHEN re.position=2 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS p2,
+        COUNT(CASE WHEN re.position=3 AND re.dnf=0 AND re.dsq=0 THEN 1 END) AS p3,
         COUNT(CASE WHEN re.is_fastest_lap=1 THEN 1 END) AS fastest_laps,
         COUNT(CASE WHEN re.dnf=1 THEN 1 END) AS dnfs,
-        MIN(re.position) AS best_finish,
-        AVG(re.position) AS avg_finish
+        MIN(CASE WHEN re.dnf=0 AND re.dsq=0 THEN re.position END) AS best_finish,
+        AVG(CASE WHEN re.dnf=0 AND re.dsq=0 THEN re.position END) AS avg_finish
     FROM result_entries re
-    WHERE re.driver_id=? AND re.dnf=0
+    WHERE re.driver_id=?
 ");
 $stats->execute([$driverId]);
 $career = $stats->fetch();

@@ -88,8 +88,7 @@ if ($sid) {
             COALESCE(SUM({$bonusSql}), 0)                                        AS total_pts,
             COUNT(CASE WHEN re.position = 1 THEN 1 END)                          AS wins,
             COUNT(CASE WHEN re.position <= 3 THEN 1 END)                         AS podiums,
-            COUNT(CASE WHEN re.dnf = 0 AND re.dsq = 0
-                            AND re.position IS NOT NULL THEN 1 END)              AS starts,
+            COUNT(DISTINCT re.result_id)                                        AS starts,
             MIN(CASE WHEN re.dnf = 0 THEN re.position END)                       AS best_pos
         FROM season_entries se
         JOIN  drivers d ON d.id  = se.driver_id
