@@ -31,7 +31,7 @@ if ($resultId) {
         LEFT JOIN races rc ON rc.id = (SELECT race_id FROM results WHERE id = re.result_id)
         LEFT JOIN season_entries se ON se.driver_id = re.driver_id AND se.season_id = rc.season_id
         WHERE re.result_id = ?
-        ORDER BY re.position ASC
+        ORDER BY re.dnf ASC, re.dsq ASC, re.position IS NULL ASC, re.position ASC, re.id ASC
     ");
     $stmt2->execute([$resultId]);
     $entries = $stmt2->fetchAll();

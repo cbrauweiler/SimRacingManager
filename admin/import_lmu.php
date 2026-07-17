@@ -53,7 +53,11 @@ function parseLmuXml(string $xmlContent): array {
         $finishTime = isset($d->FinishTime) ? (float)$d->FinishTime : null;
         $status     = (string)$d->FinishStatus;
         $laps       = (int)$d->Laps;
-        $dnf = in_array($status, ['None','Disconnected','DNF','']) || ($laps === 0);
+        // LMU setzt FinishStatus="None" für Fahrer, die bei Rennende noch auf der
+        // Strecke waren (überrundet, daher ohne FinishTime). Die sind regulär
+        // gewertet – ihre ClassPosition steht vor den Ausfällen. Echte Ausfälle
+        // melden "DNF" bzw. "Disconnected" und tragen zusätzlich DNFReason.
+        $dnf = in_array($status, ['Disconnected','DNF','']) || ($laps === 0);
         $dsq = ($status === 'Disqualified');
 
         $result['entries'][] = [
